@@ -1,3 +1,13 @@
+experiments/
+predecoded
+switched
+threaded
+threaded-cached
+tailrecursive
+subroutined
+translated
+native
+
 # Object files
 *.o
 *.ko
