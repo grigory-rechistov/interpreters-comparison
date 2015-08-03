@@ -14,6 +14,6 @@ See the Makefile for the full list of targets.
 
 Use `measure.sh` to measure run time of individual binaries or to perform a comparison of multiple variants (alternatively, run `make all measure`).
 
-Tested to compile with GCC 4.8.1 and ICC 15.0.3 on Ubuntu Linux 12.04.5. Limited testing is also done on Windows 8.1 Cygwin64 environment.
+Tested to compile and run with GCC 4.8.1, GCC 5.1.0 and ICC 15.0.3 on Ubuntu Linux 12.04.5. Limited testing is also done on Windows 8.1 Cygwin64 environment, GCC 4.8.
 
 An article discussing structure, performance variations, and comparison of interpreters: http://habrahabr.ru/company/intel/blog/261665/ (in Russian).
