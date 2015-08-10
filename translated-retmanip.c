@@ -184,10 +184,10 @@ const Instr_t Primes[PROGRAM_SIZE] = {
    list should have been saved in this artificial prologue, and then restored
    in an artificial epilogue.
    As code inspection shows, currently GCC compiler uses at most RBX alone.
-   ICC is more aggressive in registers use; this will not work correctly
-   with it.*/
+   ICC is more aggressive with its registers use; this code will not work
+   correctly with such a naive approach.*/
 #define SAVE_CALLEE_SAVED() do { \
-        __asm__ __volatile__ ("push %%rbx\n" \
+        __asm__ __volatile__ ("\n" \
                                  :::"rsp", "memory"); \
         } while (0);
 
@@ -196,14 +196,14 @@ const Instr_t Primes[PROGRAM_SIZE] = {
 #define REWRITE_AND_RETURN(newpc, entrypoints) do { \
         if (newpc > PROGRAM_SIZE) exit_generated_code(); \
         __asm__ __volatile__ ("pop %%rbx\n" \
-                                 "add $16, %%rsp\n" \
-                                 "push %0\n" \
+                                 "mov %0, (%%rsp)\n" \
                                  "ret\n" \
                                   :: \
                                   "r"(entrypoints[(newpc)]) \
                                   :"rbx", "rsp", "memory"); \
         } while (0);
 
+//                                 "add $8, %%rsp\n" \
 
 typedef void (*service_routine_t)();
 
@@ -314,7 +314,8 @@ void sr_Je(int32_t immediate) {
     if (tmp1 == 0)
         pcpu->pc += immediate;
     ADVANCE_PC(2);
-    REWRITE_AND_RETURN(pcpu->pc, entrypoints); /* Non-sequential PC change */
+    if (tmp1 == 0)
+        REWRITE_AND_RETURN(pcpu->pc, entrypoints); /* Non-sequential PC change */
 }
 
 void sr_Jne(int32_t immediate) {
@@ -323,7 +324,8 @@ void sr_Jne(int32_t immediate) {
     if (tmp1 != 0)
         pcpu->pc += immediate;
     ADVANCE_PC(2);
-    REWRITE_AND_RETURN(pcpu->pc, entrypoints); /* Non-sequential PC change */
+    if (tmp1 != 0)
+        REWRITE_AND_RETURN(pcpu->pc, entrypoints); /* Non-sequential PC change */
 }
 
 void sr_Jump(int32_t immediate) {
