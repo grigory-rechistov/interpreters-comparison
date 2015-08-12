@@ -5,7 +5,7 @@
 
 CFLAGS=-std=c11 -O2 -Wextra -Werror -gdwarf-3
 
-ALL=switched threaded predecoded subroutined threaded-cached tailrecursive translated translated-retmanip native
+ALL=switched threaded predecoded subroutined threaded-cached tailrecursive translated translated-retmanip translated-jmpmanip native
 
 all: $(ALL)
 
@@ -36,6 +36,10 @@ translated: translated.c common.h
 
 translated-retmanip: CFLAGS += -std=gnu11
 translated-retmanip: translated-retmanip.c common.h
+	$(CC) $(CFLAGS) $< -o $@
+
+translated-jmpmanip: CFLAGS += -std=gnu11
+translated-jmpmanip: translated-jmpmanip.c common.h
 	$(CC) $(CFLAGS) $< -o $@
 
 native: native.c
