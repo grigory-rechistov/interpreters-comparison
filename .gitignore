@@ -7,6 +7,8 @@ tailrecursive
 subroutined
 translated
 native
+translated-retmanip
+translated-jmpmanip
 
 # Object files
 *.o
