@@ -9,6 +9,7 @@ translated
 native
 translated-retmanip
 translated-jmpmanip
+translated-inline
 
 # Object files
 *.o

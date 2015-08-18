@@ -19,8 +19,9 @@ See the Makefile for the full list of targets.
 Additional types of translators have been added as a follow up to the original work:
 * `translator-retmanip` - a variant of translator which manipulates with a return stack to direct control flow.
 * `translator-jmpmanip` - a variant of translator which uses indirect jumps instead of returns to direct control flow.
+* `translator-inline` - a variant of translator which inlines code blocks for target instructions.
 
-These two are only tested to work when compiled with GCC.
+They are only tested to work when compiled with GCC.
 In our experiments, ICC-generated code did not satisfy simplified assumptions on register usage; adapting code to it would require certain amount of corrections to prologue/epilogue.
 
 ## Benchmarking
