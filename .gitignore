@@ -7,6 +7,7 @@ tailrecursive
 subroutined
 translated
 native
+.d/
 
 # Object files
 *.o
@@ -40,3 +41,7 @@ native
 
 # Debug files
 *.dSYM/
+
+# Eclipse files
+.cproject
+.project
