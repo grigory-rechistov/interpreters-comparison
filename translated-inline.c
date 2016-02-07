@@ -28,11 +28,17 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
+#define _GNU_SOURCE 1
+
 #ifndef __x86_64__
 /* The program generates machine code, only specific platforms are supported */
 #error This program is designed to compile only on Intel64/AMD64 platform.
 #error Sorry.
 #endif
+
+/* For dynamic function size detection */
+#include <dlfcn.h>
+#include <elf.h>
 
 #include <stdio.h>
 #include <stdint.h>
@@ -62,7 +68,7 @@ void* entrypoints[PROGRAM_SIZE] = {0};
    from the rest of the code (relative branch to fit in 32 bits) */
 /* For explanation of '#' character,
    see https://gcc.gnu.org/ml/gcc-help/2010-09/msg00088.html */
-char gen_code[JIT_CODE_SIZE] __attribute__ ((section (".text#")))
+char gen_code[JIT_CODE_SIZE] /*__attribute__ ((section (".text#")))*/
                              __attribute__ ((aligned(4096)));
 
 /* TODO:a global - not good. Should be moved into cpu state or somewhere else */
@@ -108,13 +114,16 @@ static inline decode_t decode_at_address(const Instr_t* prog, uint32_t addr) {
 }
 
 static void enter_generated_code(void* addr) {
-    __asm__ __volatile__ ( "jmp *%0"::"r"(addr):);
+    __asm__ __volatile__ ("jmp *%0\n"::"r"(addr):);
+}
+
+static void do_exit() {
+    longjmp(return_buf, 1);
+    __asm__ __volatile__("ret\n"); /* Dummy return to not confuse r2 */
 }
 
 static void exit_generated_code() {
-    __asm__ __volatile__ ("":::"memory");
-    longjmp(return_buf, 1);
-    __asm__ __volatile__ ("":::"memory");
+    __asm__ __volatile__ ("call *%0\n"::"r"(&do_exit):"memory");
 }
 
 /*** Service routines ***/
@@ -180,8 +189,8 @@ const Instr_t Primes[PROGRAM_SIZE] = {
     Instr_Halt           // nmax, c (== nmax)
 };
 
-const char prologue_marked[] = {0x66, 0x0f, 0x1f, 0x44, 0x12, 0x34};
-const char epilogue_marked[] = {0x66, 0x0f, 0x1f, 0x44, 0xdf, 0xca};
+const char prologue_marked[] = {0xf2, 0x66, 0x67, 0x0f, 0x1f, 0x44, 0x12, 0x34};
+const char epilogue_marked[] = {0xf2, 0x66, 0x67, 0x0f, 0x1f, 0x44, 0xdf, 0xca};
 
 /* From AMD64 ABI: "%rbp, %rbx and %r12 through %r15 belong to the calling
    function and the called function is required to preserve their values".
@@ -192,7 +201,7 @@ const char epilogue_marked[] = {0x66, 0x0f, 0x1f, 0x44, 0xdf, 0xca};
    ICC is more aggressive with its registers use; this code will not work
    correctly with such a naive approach. */
 #define MARKED_PROLOGUE() do { \
-        __asm__ __volatile__ (".byte 0x66, 0x0f, 0x1f, 0x44, 0x12, 0x34\n" \
+        __asm__ __volatile__ (".byte 0xf2, 0x66, 0x67, 0x0f, 0x1f, 0x44, 0x12, 0x34 \n" \
                                  :::"rsp", "memory"); \
         } while (0);
 
@@ -203,14 +212,14 @@ const char epilogue_marked[] = {0x66, 0x0f, 0x1f, 0x44, 0xdf, 0xca};
         __asm__ __volatile__ ("pop %%rbx\n" \
                                  "add $8, %%rsp\n" \
                                  "jmp *%0\n" \
-                                 ".byte 0x66, 0x0f, 0x1f, 0x44, 0xdf, 0xca \n" \
+                                 ".byte 0xf2, 0x66, 0x67, 0x0f, 0x1f, 0x44, 0xdf, 0xca \n" \
                                   :: \
                                   "r"(entrypoints[(newpc)]) \
                                   :"rbx", "rsp", "memory"); \
         } while (0);
 
 #define MARKED_RETURN() do { \
-        __asm__ __volatile__ (".byte 0x66, 0x0f, 0x1f, 0x44, 0xdf, 0xca \n" \
+        __asm__ __volatile__ (".byte 0xf2, 0x66, 0x67, 0x0f, 0x1f, 0x44, 0xdf, 0xca \n" \
                                  :: \
                                  :"rbx", "rsp", "memory"); \
         } while (0);
@@ -410,11 +419,24 @@ static const char* find_subarray(const char* array,
 }
 
 typedef struct {
-    const char *body;
-    int length;
+    const char *body; /* start of block to be copied */
+    size_t size; /* full size */
+    intptr_t start_marker; /* offset of prologue_marked */
+    intptr_t end_marker; /* offset of epilogue_marked */
 } capsule_t;
 
-static void translate_program(const Instr_t *prog,
+uint64_t  get_function_size(const capsule_t *start) {
+    return start->end_marker;
+//    return 0x1000;
+    //    Dl_info dlip;
+//    Elf64_Sym* sym = 0;
+//    int rv = dladdr1(start, &dlip, (void**)&sym, RTLD_DL_SYMENT);
+//
+//    assert((rv && sym) && "Function size is known");
+//    return sym->st_size;
+}
+
+/*static*/ void translate_program(const Instr_t *prog,
                            char *out_code, void **entrypoints, int len) {
     assert(prog);
     assert(out_code);
@@ -433,20 +455,22 @@ static void translate_program(const Instr_t *prog,
     const int sr_amount
         = sizeof(service_routines)/ sizeof(service_routines[0]);
     capsule_t *capsules = calloc(sr_amount, sizeof(capsule_t));
+    assert(capsules);
     for (int i=0; i<sr_amount; i++) {
         const char *start_capsule = find_subarray((const char*)service_routines[i], prologue_marked, sizeof(prologue_marked));
         const char *end_capsule   = find_subarray((const char*)service_routines[i], epilogue_marked, sizeof(epilogue_marked));
         assert(start_capsule && "Malformed capsule prologue");
         assert(end_capsule && "Malformed capsule epilogue");
-        capsules[i].length = end_capsule - start_capsule + sizeof(epilogue_marked);
-        capsules[i].body = start_capsule;
+        capsules[i].body = (char*)service_routines[i];
+        capsules[i].start_marker = start_capsule - capsules[i].body;
+        capsules[i].end_marker = end_capsule - capsules[i].body;
+        capsules[i].size = get_function_size(&capsules[i]);
+        printf("Debug: fcn %d, body %p, size %lu,"
+               " start_marker %lu, end_marker %lu\n",
+               i, capsules[i].body, capsules[i].size, capsules[i].start_marker,
+               capsules[i].end_marker);
     }
 
-
-    /* An IA-32 instruction "CALL rel32" is used as a trampoline to invoke
-       service routines. A template for it is "call .+0x00000005" */
-    const char call_template_code[] = { 0xe8, 0x00, 0x00, 0x00, 0x00 };
-    const int call_template_size = sizeof(call_template_code);
     
     int i = 0; /* Address of current guest instruction */
     char* cur = out_code; /* Where to put new code */
@@ -465,18 +489,20 @@ static void translate_program(const Instr_t *prog,
             cur += mov_template_size;
         }
         
-        int sr_length = capsules[decoded.opcode].length;
-        const char *sr = capsules[decoded.opcode].body;
+        int sr_length = capsules[decoded.opcode].size;
+        const char *sr = capsules[decoded.opcode].body
+                          + capsules[decoded.opcode].start_marker;
 
         assert(cur + sr_length - out_code < JIT_CODE_SIZE);
         memcpy(cur, sr, sr_length);
         i += decoded.length;
         cur += sr_length;
 
-//        assert(cur + call_template_size - out_code < JIT_CODE_SIZE);
-//        memcpy(cur, call_template_code, call_template_size);
-//        intptr_t offset = (intptr_t)service_routines[decoded.opcode]
-//                            - (intptr_t)cur - call_template_size;
+        /* TODO insert jmp to the end of the */
+
+//        assert(cur + jmp_template_size - out_code < JIT_CODE_SIZE);
+//        memcpy(cur, jmp_template_code, jmp_template_size);
+//        intptr_t offset = (intptr_t)
 //        if (offset != (intptr_t)(int32_t)offset) {
 //            fprintf(stderr, "Offset to service routine for opcode %d"
 //            " does not fit in 32 bits. Cannot generate code for it, sorry",
@@ -487,8 +513,10 @@ static void translate_program(const Instr_t *prog,
 //        /* Patch template with correct offset */
 //        memcpy(cur + 1, &offset, 4);
 //        i += decoded.length;
-//        cur += call_template_size;
+//        cur += jmp_template_size;
     }
+    printf("Debug: total generated code size %lu\n", cur - out_code);
+    __asm__ __volatile__ ("int3\n");
 }
 
 int main(int argc, char **argv) {    

@@ -42,7 +42,7 @@ translated-jmpmanip: CFLAGS += -std=gnu11
 translated-jmpmanip: translated-jmpmanip.c common.h
 	$(CC) $(CFLAGS) $< -o $@
 
-translated-inline: CFLAGS += -std=gnu11
+translated-inline: CFLAGS += -fno-reorder-blocks --std=gnu11 -fPIC -ldl
 translated-inline: translated-inline.c common.h
 	$(CC) $(CFLAGS) $< -o $@
 

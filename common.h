@@ -82,8 +82,8 @@ typedef struct {
 #define PROGRAM_SIZE 512
 #define STACK_CAPACITY 32
 
-/* Use up to 16 host bytes for one guest instruction */
-#define JIT_CODE_SIZE (PROGRAM_SIZE * 16)
+/* Use up to 256 host bytes for one guest instruction */
+#define JIT_CODE_SIZE (PROGRAM_SIZE * 256)
 
 typedef struct {
     uint32_t pc; /* Program Counter */
