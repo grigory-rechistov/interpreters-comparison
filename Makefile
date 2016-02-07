@@ -1,6 +1,6 @@
 #    Makefile for interpreters-comparison - a group of interpreters/translators
 #    for a stack virtual machine.
-#    Copyright (c) 2015 Grigory Rechistov. All rights reserved.
+#    Copyright (c) 2015, 2016 Grigory Rechistov. All rights reserved.
 #
 
 CFLAGS=-std=c11 -O2 -Wextra -Werror -gdwarf-3
@@ -37,15 +37,17 @@ translated: translated.c common.h
 native: native.c 
 	$(CC) $(CFLAGS) $< -o $@
 
-clean:
-	rm -rf $(ALL) *.exe
-
 measure: all
 	./measure.sh $(ALL)
 
 switched-noopt: CFLAGS=-std=c11 -O0 -Wextra -Werror -g
 switched-noopt: switched.c common.h
 	$(CC) $(CFLAGS) $< -o $@
+
+clean:
+	rm -f $(ALL) *.exe *.d *.o
+
+### Badly working variants follow
 
 # GCC will collapse all indirect jumps into one for this
 threaded-notune: threaded.c common.h
