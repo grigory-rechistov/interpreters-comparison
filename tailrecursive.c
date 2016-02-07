@@ -1,6 +1,6 @@
 /*  tailrecursive.c - a tail recursion optimization interpreter
     for a stack virtual machine.
-    Copyright (c) 2015 Grigory Rechistov. All rights reserved.
+    Copyright (c) 2015, 2016 Grigory Rechistov. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -132,40 +132,6 @@ static inline uint32_t pop(cpu_t *pcpu) {
     }
     return pcpu->stack[pcpu->sp--];
 }
-
-/* The program we are about to simulate */
-const Instr_t Primes[PROGRAM_SIZE] = {
-    Instr_Push, 100000, // nmax (maximal number to test)
-    Instr_Push, 2,      // nmax, c (minimal number to test)
-    /* back: */
-    Instr_Over,         // nmax, c, nmax
-    Instr_Over,         // nmax, c, nmax, c
-    Instr_Sub,          // nmax, c, c-nmax
-    Instr_JE, +23, /* end */ // nmax, c
-    Instr_Push, 2,       // nmax, c, divisor
-    /* back2: */
-    Instr_Over,         // nmax, c, divisor, c
-    Instr_Over,         // nmax, c, divisor, c, divisor
-    Instr_Swap,          // nmax, c, divisor, divisor, c
-    Instr_Sub,          // nmax, c, divisor, c-divisor
-    Instr_JE, +9, /* print_prime */ // nmax, c, divisor
-    Instr_Over,          // nmax, c, divisor, c
-    Instr_Over,          // nmax, c, divisor, c, divisor
-    Instr_Swap,          // nmax, c, divisor, divisor, c
-    Instr_Mod,           // nmax, c, divisor, c mod divisor
-    Instr_JE, +5, /* not_prime */ // nmax, c, divisor
-    Instr_Inc,           // nmax, c, divisor+1
-    Instr_Jump, -15, /* back2 */  // nmax, c, divisor
-    /* print_prime: */
-    Instr_Over,          // nmax, c, divisor, c
-    Instr_Print,         // nmax, c, divisor
-    /* not_prime */
-    Instr_Drop,          // nmax, c
-    Instr_Inc,           // nmax, c+1
-    Instr_Jump, -28, /* back */   // nmax, c
-    /* end: */
-    Instr_Halt           // nmax, c (== nmax)
-};
 
 typedef void (*service_routine_t)(cpu_t *pcpu, decode_t* pdecode);
 service_routine_t service_routines[];
@@ -362,7 +328,7 @@ int main(int argc, char **argv) {
     
     cpu_t cpu = {.pc = 0, .sp = -1, .state = Cpu_Running, 
                  .steps = 0, .stack = {0},
-                 .pmem = Primes};
+                 .pmem = Program};
     
     decode_t decoded = fetch_decode(&cpu);
     service_routines[decoded.opcode](&cpu, &decoded);

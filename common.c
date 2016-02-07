@@ -26,4 +26,82 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
-/* Nothing here yet*/
+#include "common.h"
+
+/* Program to print all prime numbers < 10000 */
+const Instr_t Primes[PROGRAM_SIZE] = {
+    Instr_Push, 100000, // nmax (maximal number to test)
+    Instr_Push, 2,      // nmax, c (minimal number to test)
+    /* back: */
+    Instr_Over,         // nmax, c, nmax
+    Instr_Over,         // nmax, c, nmax, c
+    Instr_Sub,          // nmax, c, c-nmax
+    Instr_JE, +23, /* end */ // nmax, c
+    Instr_Push, 2,       // nmax, c, divisor
+    /* back2: */
+    Instr_Over,         // nmax, c, divisor, c
+    Instr_Over,         // nmax, c, divisor, c, divisor
+    Instr_Swap,          // nmax, c, divisor, divisor, c
+    Instr_Sub,          // nmax, c, divisor, c-divisor
+    Instr_JE, +9, /* print_prime */ // nmax, c, divisor
+    Instr_Over,          // nmax, c, divisor, c
+    Instr_Over,          // nmax, c, divisor, c, divisor
+    Instr_Swap,          // nmax, c, divisor, divisor, c
+    Instr_Mod,           // nmax, c, divisor, c mod divisor
+    Instr_JE, +5, /* not_prime */ // nmax, c, divisor
+    Instr_Inc,           // nmax, c, divisor+1
+    Instr_Jump, -15, /* back2 */  // nmax, c, divisor
+    /* print_prime: */
+    Instr_Over,          // nmax, c, divisor, c
+    Instr_Print,         // nmax, c, divisor
+    /* not_prime */
+    Instr_Drop,          // nmax, c
+    Instr_Inc,           // nmax, c+1
+    Instr_Jump, -28, /* back */   // nmax, c
+    /* end: */
+    Instr_Halt           // nmax, c (== nmax)
+};
+
+/* Choose a program we are about to simulate */
+const Instr_t* Program = Primes;
+
+/* Other programs, kept here just for reference */
+const Instr_t OldProgram[PROGRAM_SIZE] = {
+    Instr_Nop,
+    Instr_Push, 0x11112222,
+    Instr_Push, 0xf00d,
+    Instr_Print,
+    Instr_Push, 0x1,
+    Instr_Push, 0x2,
+    Instr_Push, 0x3,
+    Instr_Push, 0x4,
+    Instr_Swap,
+    Instr_Dup,
+    Instr_Inc,
+    Instr_Add,
+    Instr_Sub,
+    Instr_Mul,
+    Instr_Rand,
+    Instr_Dec,
+    Instr_Drop,
+    Instr_Over,
+    Instr_Halt,
+    Instr_Break
+};
+
+const Instr_t Factorial[PROGRAM_SIZE] = {
+    Instr_Push, 12, // n,
+    Instr_Push, 1,  // n, a
+    Instr_Swap,     // a, n
+    /* back: */     // a, n
+    Instr_Swap,     // n, a
+    Instr_Over,     // n, a, n
+    Instr_Mul,      // n, a
+    Instr_Swap,     // a, n
+    Instr_Dec,      // a, n
+    Instr_Dup,      // a, n, n
+    Instr_JNE, -8,  // a, n
+    Instr_Swap,     // n, a
+    Instr_Print,    // n
+    Instr_Halt
+};

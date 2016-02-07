@@ -1,6 +1,6 @@
 /*  native.c - a native C-code implementation for algorithm used
     for the Primes program executed inside stack virtual machine.
-    Copyright (c) 2015 Grigory Rechistov. All rights reserved.
+    Copyright (c) 2015, 2016 Grigory Rechistov. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -31,7 +31,22 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "common.h"
+
+extern const Instr_t Primes[];
+
 int main() {
+    /* This program cannot be used for performance comparisons if the target
+       program chosen for simulation is different from Primes.
+       Warn and refuse to work instead of giving user bogus numbers */
+    if (Program != Primes) {
+        fprintf(stderr,
+            "This executable can only execute Primes, but another target"
+            " program was chosen. The results would be incomparable."
+            " Please fix your code\n");
+        return 1;
+    }
+    
     for (int i = 2; i < 100000; i++) {
         bool is_prime = true;
         for (int divisor = 2; divisor < i; divisor++) {

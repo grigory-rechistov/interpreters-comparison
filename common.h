@@ -1,6 +1,6 @@
-/*  common.h - a common definitons for interpreters written
+/*  common.h - common definitons for interpreters written
     for a stack virtual machine.
-    Copyright (c) 2015 Grigory Rechistov. All rights reserved.
+    Copyright (c) 2015, 2016 Grigory Rechistov. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -36,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 /* Instruction Set Architecture: 
    opcodes and arguments for individual instructions.
    Those marked with "imm" use the next machine word 
-   in program memory as an signed immediate operand.
+   in program memory as a signed immediate operand.
  */
 enum {
 Instr_Break  = 0x0000,/* Abnormal end; 
@@ -70,6 +70,12 @@ typedef enum {
 
 typedef uint32_t Instr_t;
 
+/* The code for target program for an interpreter to simulate */
+#define PROGRAM_SIZE 512
+
+extern const Instr_t* Program;
+
+#define STACK_CAPACITY 32
 /* A struct to store information about a decoded instruction */
 typedef struct {
     Instr_t opcode; /* Used as an index in switch */
@@ -79,12 +85,10 @@ typedef struct {
     const void *sr; /* label to a service routine */
 } decode_t;
 
-#define PROGRAM_SIZE 512
-#define STACK_CAPACITY 32
-
-/* Use up to 16 host bytes for one guest instruction */
+/* Use up to 16 host bytes for one guest instruction in JIT variants */
 #define JIT_CODE_SIZE (PROGRAM_SIZE * 16)
 
+/* Simulated processor state */
 typedef struct {
     uint32_t pc; /* Program Counter */
     int32_t sp; /* Stack Pointer */
