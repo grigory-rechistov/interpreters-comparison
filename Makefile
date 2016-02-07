@@ -15,7 +15,8 @@ all: $(ALL)
 
 ALL_SRCS = $(COMMON_SRC) $(ALL:=.c)
 
-# This section below is meant to generate dependencies properly using GCC flags
+# ######################
+# The section below is meant to generate dependencies properly using GCC flags
 # For explanation, see
 # http://make.mad-scientist.net/papers/advanced-auto-dependency-generation/
 DEPDIR := .d
@@ -67,6 +68,11 @@ measure: all
 
 clean:
 	rm -rf $(ALL) *.exe *.d *.o $(DEPDIR)
+
+# Do a quick check that code builds and runs for at least several steps
+sanity: all
+	for APP in $(ALL); do ./$$APP 100 > /dev/null; done
+	@echo "Sanity OK"
 
 ### Inferior, faulty, broken etc targets, not built by default
 

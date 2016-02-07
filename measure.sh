@@ -2,14 +2,13 @@
 # A script to run each interpreter binary multiple times,
 # calculate average execution time, and produce chart in PDF and PNG formats.
 # Dependencies: awk, gnuplot, time, date
-# Copyright (c) 2015 Grigory Rechistov. All rights reserved.
+# Copyright (c) 2015, 2016 Grigory Rechistov. All rights reserved.
 
 # Set NITER to number of iterations to be done for each interpreter
 NITER=5
 
-# Leave OPTS empty for non-debug runs
-OPTS=300000000
-OPTS=
+# OPTS come from enviroment for sanity or debug runs
+# OPTS=
 
 ### End of options ###
 set -e
