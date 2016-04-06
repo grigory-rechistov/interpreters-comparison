@@ -59,6 +59,10 @@ Instr_Drop   = 0x000f,
 Instr_Over   = 0x0010,
 Instr_Mod    = 0x0011,
 Instr_Jump   = 0x0012, /* imm */
+Instr_Div    = 0x0013,
+Instr_Greater= 0x0014,
+Instr_Get    = 0x0015,
+Instr_Set    = 0x0016,
 
 };
 

@@ -55,6 +55,7 @@ static inline decode_t decode(Instr_t raw_instr, const cpu_t *pcpu) {
     assert(pcpu);
     decode_t result = {0};
     result.opcode = raw_instr;
+ //   printf ("pc = %d, \n", pcpu->pc);
     switch (raw_instr) {
     case Instr_Nop:
     case Instr_Halt:
@@ -70,6 +71,10 @@ static inline decode_t decode(Instr_t raw_instr, const cpu_t *pcpu) {
     case Instr_Drop:
     case Instr_Over:
     case Instr_Mod:
+    case Instr_Div:
+    case Instr_Get:
+    case Instr_Set:
+    case Instr_Greater:
         result.length = 1;
         break;
     case Instr_Push:
@@ -117,6 +122,25 @@ static inline uint32_t pop(cpu_t *pcpu) {
     return pcpu->stack[pcpu->sp--];
 }
 
+static inline void set_stack(cpu_t *pcpu, uint32_t v, int32_t my_p) {
+    assert(pcpu);
+    if (my_p >= STACK_CAPACITY-1) {
+        printf("Bad adress\n");
+        pcpu->state = Cpu_Break;
+        return;
+    }
+    pcpu->stack[my_p] = v;
+}
+
+static inline uint32_t get_stack(cpu_t *pcpu, int32_t my_p) {
+    assert(pcpu);
+    if (my_p < 0) {
+        printf("Wrong adress\n");
+        pcpu->state = Cpu_Break;
+        return 0;
+    }
+    return pcpu->stack[my_p];
+}
 int main(int argc, char **argv) {
     long long steplimit = LLONG_MAX;
     if (argc > 1) {
@@ -236,6 +260,34 @@ int main(int argc, char **argv) {
             break;
         case Instr_Break:
             cpu.state = Cpu_Break;
+            break;
+        case Instr_Div:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            if (tmp2 == 0) {
+                cpu.state = Cpu_Break;
+                break;
+            }
+            push(&cpu, tmp1 / tmp2);
+            break;
+        case Instr_Greater:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            if (tmp1 > tmp2)
+                push(&cpu, 1);
+            else
+                push(&cpu, 0);
+            break;
+        case Instr_Set:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            set_stack(&cpu, tmp2, tmp1);
+            break;
+        case Instr_Get:
+            tmp1 = pop(&cpu);
+            push(&cpu, get_stack(&cpu, tmp1));
             break;
         default:
             assert("Unreachable" && false);
