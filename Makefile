@@ -9,7 +9,7 @@ COMMON_SRC = common.c
 COMMON_OBJ := $(COMMON_SRC:.c=.o)
 COMMON_HEADERS = common.h
 
-ALL = switched threaded predecoded subroutined threaded-cached tailrecursive translated native native-newton
+ALL = switched threaded predecoded subroutined threaded-cached tailrecursive translated native native-newton native-bubble
 # Must be the first target for the magic below to work
 all: $(ALL)
 
@@ -61,6 +61,8 @@ translated: translated.o
 native: native.o
 
 native-newton: native-newton.o
+
+native-bubble: native-bubble.o
 ########################
 ### Maintainance targets
 

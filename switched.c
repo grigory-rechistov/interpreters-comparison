@@ -55,7 +55,7 @@ static inline decode_t decode(Instr_t raw_instr, const cpu_t *pcpu) {
     assert(pcpu);
     decode_t result = {0};
     result.opcode = raw_instr;
- //   printf ("pc = %d, \n", pcpu->pc);
+    //printf ("pc = %d, \n", pcpu->pc);
     switch (raw_instr) {
     case Instr_Nop:
     case Instr_Halt:
@@ -125,7 +125,7 @@ static inline uint32_t pop(cpu_t *pcpu) {
 static inline void set_stack(cpu_t *pcpu, uint32_t v, int32_t my_p) {
     assert(pcpu);
     if (my_p >= STACK_CAPACITY-1) {
-        printf("Bad adress\n");
+        printf("Bad address\n");
         pcpu->state = Cpu_Break;
         return;
     }
@@ -135,7 +135,7 @@ static inline void set_stack(cpu_t *pcpu, uint32_t v, int32_t my_p) {
 static inline uint32_t get_stack(cpu_t *pcpu, int32_t my_p) {
     assert(pcpu);
     if (my_p < 0) {
-        printf("Wrong adress\n");
+        printf("Wrong address\n");
         pcpu->state = Cpu_Break;
         return 0;
     }

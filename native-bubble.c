@@ -1,5 +1,5 @@
-/*  native.c - a native C-code implementation for algorithm used
- *  for the Newton program executed inside stack virtual machine.
+/*  native-bubble.c - a native C-code implementation for algorithm used
+ *  for the Bubble program executed inside stack virtual machine.
  *  Copyright (c) 2015, 2016 Alexandra Tsvetkova. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,34 +29,46 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "common.h"
 
-extern const Instr_t Newton[];
+#define SWAP(A, B) { int t = A; A = B; B = t; }
+
+extern const Instr_t Bubble[];
 
 int main()
 {
     /* This program cannot be used for performance comparisons if the target
-     * program chosen for simulation is different from Newton.
+     * program chosen for simulation is different from Bubble.
      * Warn and refuse to work instead of giving user bogus numbers
      */
-    if (Program != Newton) {
+    if (Program != Bubble) {
         fprintf(stderr,
             "This executable can only execute Newton, but another target"
             " program was chosen. The results would be incomparable."
             " Please fix your code\n");
         return 1;
     }
-    int n = 9999;
-    //printf("Enter the number ");
+    int n = 24;
+    //printf("Enter array size ");
     //scanf("%d", &n);
-    int x = 1;
-    int decreased = 0;
-    for (;;) {
-        int nx = (x + n / x) >> 1;
-        if (x == nx || nx > x && decreased)  break;
-           decreased = nx < x;
-        x = nx;
-   }
-   printf("\nsqrt(%d) = %d\n", n, x);
-   return 0;
+
+    int* a = (int*)malloc(n*sizeof(int));
+    int i, j;
+
+
+    for (i = n - 1; i >= 0; i--)
+        a[i]=rand();
+    for (i = n - 1; i >= 0; i--)
+    {
+        for (j = 0; j < i; j++)
+        {
+            if (a[j] < a[j + 1])
+                SWAP( a[j], a[j + 1] );
+        }
+    }
+    for (i = n - 1; i >= 0; i--)
+        printf("\na[%d] = %d", i, a[i]);
+    printf("\n");
+    return 0;
 }
