@@ -62,8 +62,37 @@ const Instr_t Primes[PROGRAM_SIZE] = {
     Instr_Halt           // nmax, c (== nmax)
 };
 
+const Instr_t Except_DIV[PROGRAM_SIZE] = {
+    Instr_Jump, +7, // Pointer to exception handler
+    Instr_Push, 0,  // if zero, will print exception number
+    Instr_Push, 42,
+    Instr_Mod,
+    Instr_Print,
+    Instr_Halt,
+
+    // Exception handler start
+    Instr_CState, // Put Exception number on stack
+    Instr_Ret
+};
+
+const Instr_t Except_Safe_DIV[PROGRAM_SIZE] = {
+    Instr_Jump, +3, // Pointer to exception handler
+    Instr_Mod,
+    Instr_Print,
+    Instr_Halt,
+
+    // Exception handler start
+    Instr_Rand,  // Add something on stack
+    Instr_Dup,
+    Instr_Print, // Print what we've added
+    Instr_Mod,   // Try again
+    Instr_Ret
+};
+
+
 /* Choose a program we are about to simulate */
-const Instr_t* Program = Primes;
+const Instr_t* Program = Except_Safe_DIV;
+// const Instr_t* Program = Except_DIV;
 
 /* Other programs, kept here just for reference */
 const Instr_t OldProgram[PROGRAM_SIZE] = {
@@ -105,3 +134,6 @@ const Instr_t Factorial[PROGRAM_SIZE] = {
     Instr_Print,    // n
     Instr_Halt
 };
+
+
+

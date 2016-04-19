@@ -123,13 +123,13 @@ int main(int argc, char **argv) {
             return 2;
         }
     }
-    
-    cpu_t cpu = {.pc = 0, .sp = -1, .state = Cpu_Running, 
+
+    cpu_t cpu = {.pc = 0, .sp = -1, .state = Cpu_Running,
                  .steps = 0, .stack = {0},
                  .pmem = Program};
     decode_t decoded_cache[PROGRAM_SIZE];
     predecode_program(cpu.pmem, decoded_cache, PROGRAM_SIZE);
-    
+
     while (cpu.state == Cpu_Running && cpu.steps < steplimit) {
         if (!(cpu.pc < PROGRAM_SIZE)) {
             printf("PC out of bounds\n");

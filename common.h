@@ -33,13 +33,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 #ifndef COMMON_H_
 #define COMMON_H_
 
-/* Instruction Set Architecture: 
+/* Instruction Set Architecture:
    opcodes and arguments for individual instructions.
-   Those marked with "imm" use the next machine word 
+   Those marked with "imm" use the next machine word
    in program memory as a signed immediate operand.
  */
 enum {
-Instr_Break  = 0x0000,/* Abnormal end; 
+Instr_Break  = 0x0000,/* Abnormal end;
                          all unitialized memory will trigger a stop */
 Instr_Nop    = 0x0001,
 Instr_Halt   = 0x0002, /* Normal program end */
@@ -59,14 +59,29 @@ Instr_Drop   = 0x000f,
 Instr_Over   = 0x0010,
 Instr_Mod    = 0x0011,
 Instr_Jump   = 0x0012, /* imm */
-
+Instr_Ret    = 0x0013,
+Instr_CState = 0x0014, /* Put function type on stack */
 };
 
 typedef enum {
     Cpu_Running = 0,
     Cpu_Halted,
-    Cpu_Break
+    Cpu_Break,
+    Cpu_Flush
 } cpu_state_t;
+
+typedef enum {
+    Normal = 0,
+    Except_Zero_Div,
+    Except_PC_Bounds,
+    Except_ST_OVF,
+    Except_ST_UVF
+} call_type_t;
+
+typedef struct {
+    uint32_t ret; /* Program Counter */
+    call_type_t type;
+} funccall_t;
 
 typedef uint32_t Instr_t;
 
@@ -92,9 +107,11 @@ typedef struct {
 typedef struct {
     uint32_t pc; /* Program Counter */
     int32_t sp; /* Stack Pointer */
+    int32_t csp; /* Call Stack Pointer */
     cpu_state_t state;
     long long steps; /* Statistics - total number of instructions */
     uint32_t stack[STACK_CAPACITY]; /* Data Stack */
+    funccall_t call_stack[STACK_CAPACITY]; /* Call Stack */
     const Instr_t *pmem; /* Program Memory */
 } cpu_t;
 
