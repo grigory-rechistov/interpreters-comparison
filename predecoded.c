@@ -114,22 +114,12 @@ static void predecode_program(const Instr_t *prog,
 }
 
 int main(int argc, char **argv) {
-    long long steplimit = LLONG_MAX;
-    if (argc > 1) {
-        char *endptr = NULL;
-        steplimit = strtoll(argv[1], &endptr, 10);
-        if (errno || (*endptr != '\0')) {
-            fprintf(stderr, "Usage: %s [steplimit]\n", argv[0]);
-            return 2;
-        }
-    }
-    
-    cpu_t cpu = {.pc = 0, .sp = -1, .state = Cpu_Running, 
-                 .steps = 0, .stack = {0},
-                 .pmem = Program};
+    long long steplimit = parse_args(argc, argv);
+    cpu_t cpu = init_cpu();
+
     decode_t decoded_cache[PROGRAM_SIZE];
     predecode_program(cpu.pmem, decoded_cache, PROGRAM_SIZE);
-    
+
     while (cpu.state == Cpu_Running && cpu.steps < steplimit) {
         if (!(cpu.pc < PROGRAM_SIZE)) {
             printf("PC out of bounds\n");
@@ -218,7 +208,7 @@ int main(int argc, char **argv) {
             break;
         case Instr_Drop:
             (void)pop(&cpu);
-            break;    
+            break;
         case Instr_JE:
             tmp1 = pop(&cpu);
             BAIL_ON_ERROR();
@@ -244,7 +234,7 @@ int main(int argc, char **argv) {
         cpu.pc += decoded.length; /* Advance PC */
         cpu.steps++;
     }
-    
+
     assert(cpu.state != Cpu_Running || cpu.steps == steplimit);
     /* Print CPU state */
     printf("CPU executed %lld steps. End state \"%s\".\n",
@@ -256,7 +246,9 @@ int main(int argc, char **argv) {
         printf("%#10x ", cpu.stack[i]);
     }
     printf("%s\n", cpu.sp == -1? "(empty)": "");
-    
+
+    free(LoadedProgram);
+
     return cpu.state == Cpu_Halted ||
            (cpu.state == Cpu_Running &&
             cpu.steps == steplimit)?0:1;
