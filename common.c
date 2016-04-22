@@ -126,9 +126,9 @@ static const char *steplimit_opt = "--steplimit=";
 static const char *inp_prog_opt = "--inp-prog=";
 
 static inline
-void help_dump(char * exec_name, int ret_code) {
+void report_usage_and_exit(char * exec_name, int ret_code) {
     fprintf(stderr, "Usage: %s %s<num> %s<str>\n", exec_name, steplimit_opt, inp_prog_opt);
-    exit (2);
+    exit (ret_code);
 }
 
 long long parse_args(int argc, char** argv) {
@@ -137,25 +137,25 @@ long long parse_args(int argc, char** argv) {
 
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help"))
-            help_dump(argv[0], 2);
+            report_usage_and_exit(argv[0], 2);
         else if (!strncmp(argv[i], steplimit_opt, strlen(steplimit_opt))) {
             char *endptr = NULL;
             steplimit = strtoll(argv[i] + strlen(steplimit_opt), &endptr, 10);
             if (errno || (*endptr != '\0')) {
                 fprintf(stderr, "Unrecognized steplimit: %s\a", argv[i]);
-                help_dump(argv[0], 2);
+                report_usage_and_exit(argv[0], 2);
             }
         }
         else if (!strncmp(argv[i], inp_prog_opt, strlen(inp_prog_opt))) {
             prog_file = fopen(argv[i] + strlen(inp_prog_opt), "rb");
             if (errno || prog_file == NULL) {
                 fprintf(stderr, "Unrecognized program file: %s\n", argv[i]);
-                help_dump(argv[0], 2);
+                report_usage_and_exit(argv[0], 2);
             }
         }
         else {
             fprintf(stderr, "Unrecognized option: %s\n", argv[i]);
-            help_dump(argv[0], 2);
+            report_usage_and_exit(argv[0], 2);
         }
     }
 
@@ -164,12 +164,14 @@ long long parse_args(int argc, char** argv) {
         fseek(prog_file, 0, SEEK_END);  // Jump to the end of the file
         filelen = ftell(prog_file);     // Get the current byte offset in the file
         rewind(prog_file);              // Jump back to the beginning of the file
-        if (filelen > PROGRAM_SIZE * sizeof(Instr_t))
-            fprintf(stderr, "Warning: input program size exceeds allocated memory.\n");
+        if (filelen > PROGRAM_SIZE * sizeof(Instr_t)) {
+            fprintf(stderr, "Input program size exceeds allocated memory.\n");
+            exit(2);
+        }
         LoadedProgram = (Instr_t*) calloc(filelen, sizeof(Instr_t)); // Enough memory for file
         if (LoadedProgram == NULL) {
             fprintf(stderr, "Can't allocate memory for input program.\n");
-            exit (2);
+            exit(2);
         }
         fread(LoadedProgram, filelen, 1, prog_file); // Read in the entire file
         fclose(prog_file);                           // Close the file
@@ -182,7 +184,7 @@ void write_program (Instr_t* program, size_t program_size, const char* out_file)
     FILE *prog_file = fopen(out_file, "wb");
     if (errno || prog_file == NULL) {
         fprintf(stderr, "Can't open output file.\n");
-        help_dump("", 2);
+        report_usage_and_exit("", 2);
     }
     fwrite(program, sizeof(Instr_t), program_size, prog_file);
     fclose(prog_file);
