@@ -7,6 +7,7 @@ tailrecursive
 subroutined
 translated
 native
+x64
 .d/
 
 # Object files
@@ -45,3 +46,7 @@ native
 # Eclipse files
 .cproject
 .project
+
+# VS files
+.opendb
+.sdf
