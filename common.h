@@ -61,6 +61,7 @@ Instr_Mod    = 0x0011,
 Instr_Jump   = 0x0012, /* imm */
 Instr_Ret    = 0x0013,
 Instr_CState = 0x0014, /* Put function type on stack */
+Instr_EXCPT  = 0x0015, /* imm */ /* Set global address of exception handler */
 };
 
 typedef enum {
@@ -106,6 +107,7 @@ typedef struct {
 /* Simulated processor state */
 typedef struct {
     uint32_t pc; /* Program Counter */
+    int32_t REG_EXCPT; /* Address of exception handler; negative if not set */
     int32_t sp; /* Stack Pointer */
     int32_t csp; /* Call Stack Pointer */
     cpu_state_t state;

@@ -37,7 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 #include "common.h"
 
 
-static inline void handle_call(cpu_t *pcpu, uint32_t where, call_type_t type);
+static inline void handle_call(cpu_t *pcpu, int32_t where, call_type_t type);
 
 
 static inline Instr_t fetch(const cpu_t *pcpu) {
@@ -49,7 +49,7 @@ static inline Instr_t fetch(const cpu_t *pcpu) {
 static inline Instr_t fetch_checked(cpu_t *pcpu) {
     if (!(pcpu->pc < PROGRAM_SIZE)) {
         printf("PC out of bounds\n");
-        handle_call(pcpu, 0, Except_PC_Bounds);
+        handle_call(pcpu, pcpu->REG_EXCPT, Except_PC_Bounds);
         pcpu->state = Cpu_Flush;
         return fetch_checked(pcpu);
     }
@@ -83,6 +83,7 @@ static inline decode_t decode(Instr_t raw_instr, const cpu_t *pcpu) {
     case Instr_JNE:
     case Instr_JE:
     case Instr_Jump:
+    case Instr_EXCPT:
         result.length = 2;
         if (!(pcpu->pc+1 < PROGRAM_SIZE)) {
             printf("PC+1 out of bounds\n");
@@ -109,7 +110,7 @@ static inline void push(cpu_t *pcpu, uint32_t v) {
     if (pcpu->sp >= STACK_CAPACITY-1) {
         printf("Stack overflow\n");
         pcpu->state = Cpu_Flush;
-        handle_call(pcpu, 0, Except_ST_OVF);
+        handle_call(pcpu, pcpu->REG_EXCPT, Except_ST_OVF);
         return;
     }
     pcpu->stack[++pcpu->sp] = v;
@@ -121,15 +122,21 @@ static inline uint32_t pop(cpu_t *pcpu) {
     if (pcpu->sp < 0) {
         printf("Stack underflow\n");
         pcpu->state = Cpu_Flush;
-        handle_call(pcpu, 0, Except_ST_UVF);
+        handle_call(pcpu, pcpu->REG_EXCPT, Except_ST_UVF);
         return 0;
     }
     return pcpu->stack[pcpu->sp--];
 }
 
 
-static inline void handle_call(cpu_t *pcpu, uint32_t where, call_type_t type) {
+static inline void handle_call(cpu_t *pcpu, int32_t where, call_type_t type) {
     assert(pcpu);
+    if ((where < 0) || (where >= PROGRAM_SIZE)) {
+        printf("Function call address out of bounds\n");
+        pcpu->state = Cpu_Break;
+        return;
+    }
+
     if (pcpu->csp >= STACK_CAPACITY-1) {
         printf("Call stack overflow\n");
         pcpu->state = Cpu_Break;
@@ -173,17 +180,9 @@ int main(int argc, char **argv) {
         }
     }
 
-    cpu_t cpu = {.pc = 0, .sp = -1, .csp = -1, .state = Cpu_Running,
-                 .steps = 0, .stack = {0},
+    cpu_t cpu = {.pc = 0, .REG_EXCPT = -1, .sp = -1, .csp = -1,
+                 .state = Cpu_Running, .steps = 0, .stack = {0},
                  .pmem = Program};
-
-    // First, handle pre-enty-point code (like exception handlers)
-    Instr_t raw_instr = fetch_checked(&cpu);
-    decode_t decoded = decode(raw_instr, &cpu);
-    // The first instruction should be a jump to the user-defined exception handler
-    if (decoded.opcode != Instr_Jump)
-        cpu.state = Cpu_Break; // Refuse to work
-    cpu.pc += decoded.length; /* Advance PC */
 
     while ((cpu.state != Cpu_Halted) && (cpu.state != Cpu_Break) && (cpu.steps < steplimit)) {
         cpu.state = Cpu_Running;
@@ -255,7 +254,7 @@ int main(int argc, char **argv) {
             BAIL_ON_ERROR();
             if (tmp2 == 0) {
                 cpu.state = Cpu_Flush;
-                handle_call(&cpu, 0, Except_Zero_Div);
+                handle_call(&cpu, cpu.REG_EXCPT, Except_Zero_Div);
                 break;
             }
             push(&cpu, tmp1 % tmp2);
@@ -301,6 +300,9 @@ int main(int argc, char **argv) {
             break;
         case Instr_CState:
             push(&cpu, get_call_state(&cpu));
+            break;
+        case Instr_EXCPT:
+            cpu.REG_EXCPT = decoded.immediate;
             break;
         default:
             assert("Unreachable" && false);

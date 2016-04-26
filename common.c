@@ -63,8 +63,8 @@ const Instr_t Primes[PROGRAM_SIZE] = {
 };
 
 const Instr_t Except_DIV[PROGRAM_SIZE] = {
-    Instr_Jump, +7, // Pointer to exception handler
-    Instr_Push, 0,  // if zero, will print exception number
+    Instr_EXCPT, +9, // Pointer to exception handler
+    Instr_Push, 0,   // if zero, will print exception number
     Instr_Push, 42,
     Instr_Mod,
     Instr_Print,
@@ -76,7 +76,7 @@ const Instr_t Except_DIV[PROGRAM_SIZE] = {
 };
 
 const Instr_t Except_Safe_DIV[PROGRAM_SIZE] = {
-    Instr_Jump, +3, // Pointer to exception handler
+    Instr_EXCPT, +5, // Pointer to exception handler
     Instr_Mod,
     Instr_Print,
     Instr_Halt,
