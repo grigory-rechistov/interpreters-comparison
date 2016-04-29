@@ -57,6 +57,12 @@ static inline decode_t decode_at_address(const Instr_t* prog, uint32_t addr) {
     case Instr_Drop:
     case Instr_Over:
     case Instr_Mod:
+    case Instr_And:
+    case Instr_Or:
+    case Instr_Xor:
+    case Instr_SHL:
+    case Instr_SHR:
+    case Instr_Rot:
         result.length = 1;
         break;
     case Instr_Push:
@@ -135,7 +141,10 @@ int main(int argc, char **argv) {
         &&sr_Break, &&sr_Nop, &&sr_Halt, &&sr_Push, &&sr_Print,
         &&sr_Jne, &&sr_Swap, &&sr_Dup, &&sr_Je, &&sr_Inc,
         &&sr_Add, &&sr_Sub, &&sr_Mul, &&sr_Rand, &&sr_Dec,
-        &&sr_Drop, &&sr_Over, &&sr_Mod, &&sr_Jump, NULL /* This NULL seems to be essential to keep GCC from over-optimizing? */
+        &&sr_Drop, &&sr_Over, &&sr_Mod, &&sr_Jump,
+        &&sr_And, &&sr_Or, &&sr_Xor,
+        &&sr_SHL, &&sr_SHR,
+        &&sr_Rot, NULL /* This NULL seems to be essential to keep GCC from over-optimizing? */
     };
     long long steplimit = LLONG_MAX;
     if (argc > 1) {
@@ -153,7 +162,7 @@ int main(int argc, char **argv) {
     decode_t decoded_cache[PROGRAM_SIZE];
     predecode_program(cpu.pmem, service_routines, decoded_cache, PROGRAM_SIZE);
     
-    uint32_t tmp1 = 0, tmp2 = 0;
+    uint32_t tmp1 = 0, tmp2 = 0, tmp3 = 0;
     decode_t decoded = {0};
     do {
         DISPATCH();
@@ -267,6 +276,51 @@ int main(int argc, char **argv) {
             DISPATCH();
         sr_Jump:
             cpu.pc += decoded.immediate;
+            ADVANCE_PC();
+            DISPATCH();
+        sr_And:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 & tmp2);
+            ADVANCE_PC();
+            DISPATCH();
+        sr_Or:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 | tmp2);
+            ADVANCE_PC();
+            DISPATCH();
+        sr_Xor:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 ^ tmp2);
+            ADVANCE_PC();
+            DISPATCH();
+        sr_SHL:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 << tmp2);
+            ADVANCE_PC();
+            DISPATCH();
+        sr_SHR:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 >> tmp2);
+            ADVANCE_PC();
+            DISPATCH();
+        sr_Rot:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            tmp3 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1);
+            push(&cpu, tmp3);
+            push(&cpu, tmp2);
             ADVANCE_PC();
             DISPATCH();
         sr_Break:

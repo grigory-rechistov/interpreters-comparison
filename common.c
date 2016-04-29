@@ -62,8 +62,45 @@ const Instr_t Primes[PROGRAM_SIZE] = {
     Instr_Halt           // nmax, c (== nmax)
 };
 
+const Instr_t Instr_Rot_Test[PROGRAM_SIZE] = {
+    Instr_Push, 1,
+    Instr_Push, 5,
+    Instr_Push, 8,
+    Instr_Rot,
+    Instr_Halt
+};
+
+const Instr_t Instr_Logic_Test[PROGRAM_SIZE] = {
+   Instr_Push, 1,
+   Instr_Push, 2,
+   Instr_Xor,
+   Instr_Print,
+   Instr_Push, 1,
+   Instr_Push, 2,
+   Instr_Or,
+   Instr_Print,
+   Instr_Push, 1,
+   Instr_Push, 2,
+   Instr_And,
+   Instr_Print,
+   Instr_Halt
+};
+
+const Instr_t Instr_SHx_Test[PROGRAM_SIZE] = {
+   Instr_Push, 1,
+   Instr_Push, 3,
+   Instr_SHL,
+   Instr_Print,
+   Instr_Push, 1,
+   Instr_Push, 3,
+   Instr_SHR,
+   Instr_Print,
+   Instr_Halt
+};
+
 /* Choose a program we are about to simulate */
-const Instr_t* Program = Primes;
+//const Instr_t* Program = Primes;
+const Instr_t* Program = Instr_SHx_Test;
 
 /* Other programs, kept here just for reference */
 const Instr_t OldProgram[PROGRAM_SIZE] = {
@@ -105,3 +142,5 @@ const Instr_t Factorial[PROGRAM_SIZE] = {
     Instr_Print,    // n
     Instr_Halt
 };
+
+

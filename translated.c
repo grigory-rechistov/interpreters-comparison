@@ -83,6 +83,12 @@ static inline decode_t decode_at_address(const Instr_t* prog, uint32_t addr) {
     case Instr_Drop:
     case Instr_Over:
     case Instr_Mod:
+    case Instr_And:
+    case Instr_Or:
+    case Instr_Xor:
+    case Instr_SHL:
+    case Instr_SHR:
+    case Instr_Rot:
         result.length = 1;
         break;
     case Instr_Push:
@@ -267,6 +273,51 @@ void sr_Jump(int32_t immediate) {
     exit_generated_code();    
 }
 
+void sr_And() {
+    uint32_t tmp1 = pop(pcpu);
+    uint32_t tmp2 = pop(pcpu);
+    push(pcpu, tmp1 & tmp2);
+    ADVANCE_PC(1);
+}
+
+void sr_Or() {
+    uint32_t tmp1 = pop(pcpu);
+    uint32_t tmp2 = pop(pcpu);
+    push(pcpu, tmp1 | tmp2);
+    ADVANCE_PC(1);
+}
+
+void sr_Xor() {
+    uint32_t tmp1 = pop(pcpu);
+    uint32_t tmp2 = pop(pcpu);
+    push(pcpu, tmp1 ^ tmp2);
+    ADVANCE_PC(1);
+}
+
+void sr_SHL() {
+    uint32_t tmp1 = pop(pcpu);
+    uint32_t tmp2 = pop(pcpu);
+    push(pcpu, tmp1 << tmp2);
+    ADVANCE_PC(1);
+}
+
+void sr_SHR() {
+    uint32_t tmp1 = pop(pcpu);
+    uint32_t tmp2 = pop(pcpu);
+    push(pcpu, tmp1 >> tmp2);
+    ADVANCE_PC(1);
+}
+
+void sr_Rot() {
+    uint32_t tmp1 = pop(pcpu);
+    uint32_t tmp2 = pop(pcpu);
+    uint32_t tmp3 = pop(pcpu);
+    push(pcpu, tmp1);
+    push(pcpu, tmp3);
+    push(pcpu, tmp2);
+    ADVANCE_PC(1);
+}
+
 void sr_Break() {
     pcpu->state = Cpu_Break;
     ADVANCE_PC(1);
@@ -277,7 +328,10 @@ const service_routine_t service_routines[] = {
         &sr_Break, &sr_Nop, &sr_Halt, &sr_Push, &sr_Print,
         &sr_Jne, &sr_Swap, &sr_Dup, &sr_Je, &sr_Inc,
         &sr_Add, &sr_Sub, &sr_Mul, &sr_Rand, &sr_Dec,
-        &sr_Drop, &sr_Over, &sr_Mod, &sr_Jump
+        &sr_Drop, &sr_Over, &sr_Mod, &sr_Jump,
+        &sr_And, &sr_Or, &sr_Xor,
+        &sr_SHL, &sr_SHR,
+        &sr_Rot
     };
 
 static void translate_program(const Instr_t *prog,

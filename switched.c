@@ -70,6 +70,13 @@ static inline decode_t decode(Instr_t raw_instr, const cpu_t *pcpu) {
     case Instr_Drop:
     case Instr_Over:
     case Instr_Mod:
+    /* Added instructions */
+    case Instr_And:
+    case Instr_Or:
+    case Instr_Xor:
+    case Instr_SHL:
+    case Instr_SHR:
+    case Instr_Rot:
         result.length = 1;
         break;
     case Instr_Push:
@@ -137,7 +144,7 @@ int main(int argc, char **argv) {
         BAIL_ON_ERROR();
         decode_t decoded = decode(raw_instr, &cpu);
         
-        uint32_t tmp1 = 0, tmp2 = 0;
+        uint32_t tmp1 = 0, tmp2 = 0, tmp3 = 0;
         /* Execute - a big switch */
         switch(decoded.opcode) {
         case Instr_Nop:
@@ -233,6 +240,45 @@ int main(int argc, char **argv) {
             break;
         case Instr_Jump:
             cpu.pc += decoded.immediate;
+            break;
+        case Instr_And:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 & tmp2);
+            break;
+        case Instr_Or:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 | tmp2);
+            break;
+        case Instr_Xor:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 ^ tmp2);
+            break;
+        case Instr_SHL:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 << tmp2);
+            break;
+        case Instr_SHR:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 >> tmp2);
+            break;
+        case Instr_Rot:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            tmp3 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1);
+            push(&cpu, tmp3);
+            push(&cpu, tmp2);
             break;
         case Instr_Break:
             cpu.state = Cpu_Break;

@@ -73,6 +73,12 @@ static inline decode_t decode(Instr_t raw_instr, const cpu_t *pcpu) {
     case Instr_Drop:
     case Instr_Over:
     case Instr_Mod:
+    case Instr_And:
+    case Instr_Or:
+    case Instr_Xor:
+    case Instr_SHL:
+    case Instr_SHR:
+    case Instr_Rot:
         result.length = 1;
         break;
     case Instr_Push:
@@ -236,6 +242,51 @@ void sr_Jne(cpu_t *pcpu, decode_t *pdecoded) {
         pcpu->pc += pdecoded->immediate;
 }
 
+void sr_And(cpu_t *pcpu, decode_t *pdecoded) {
+    uint32_t tmp1 = pop(pcpu);
+    uint32_t tmp2 = pop(pcpu);
+    BAIL_ON_ERROR();
+    push(pcpu, tmp1 & tmp2);
+}
+
+void sr_Or(cpu_t *pcpu, decode_t *pdecoded) {
+    uint32_t tmp1 = pop(pcpu);
+    uint32_t tmp2 = pop(pcpu);
+    BAIL_ON_ERROR();
+    push(pcpu, tmp1 | tmp2);
+}
+
+void sr_Xor(cpu_t *pcpu, decode_t *pdecoded) {
+    uint32_t tmp1 = pop(pcpu);
+    uint32_t tmp2 = pop(pcpu);
+    BAIL_ON_ERROR();
+    push(pcpu, tmp1 ^ tmp2);
+}
+
+void sr_SHL(cpu_t *pcpu, decode_t *pdecoded) {
+    uint32_t tmp1 = pop(pcpu);
+    uint32_t tmp2 = pop(pcpu);
+    BAIL_ON_ERROR();
+    push(pcpu, tmp1 << tmp2);
+}
+
+void sr_SHR(cpu_t *pcpu, decode_t *pdecoded) {
+    uint32_t tmp1 = pop(pcpu);
+    uint32_t tmp2 = pop(pcpu);
+    BAIL_ON_ERROR();
+    push(pcpu, tmp1 >> tmp2);
+}
+
+void sr_Rot(cpu_t *pcpu, decode_t *pdecoded) {
+    uint32_t tmp1 = pop(pcpu);
+    uint32_t tmp2 = pop(pcpu);
+    uint32_t tmp3 = pop(pcpu);
+    BAIL_ON_ERROR();
+    push(pcpu, tmp1);
+    push(pcpu, tmp3);
+    push(pcpu, tmp2);
+}
+
 void sr_Jump(cpu_t *pcpu, decode_t *pdecoded) {
     pcpu->pc += pdecoded->immediate;
 }
@@ -250,7 +301,10 @@ service_routine_t service_routines[] = {
         &sr_Break, &sr_Nop, &sr_Halt, &sr_Push, &sr_Print,
         &sr_Jne, &sr_Swap, &sr_Dup, &sr_Je, &sr_Inc,
         &sr_Add, &sr_Sub, &sr_Mul, &sr_Rand, &sr_Dec,
-        &sr_Drop, &sr_Over, &sr_Mod, &sr_Jump
+        &sr_Drop, &sr_Over, &sr_Mod, &sr_Jump,
+        &sr_And, &sr_Or, &sr_Xor,
+        &sr_SHR, &sr_SHL,
+        &sr_Rot
     };
 
 int main(int argc, char **argv) {    
