@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
+#include <math.h>
 
 #include "common.h"
 
@@ -76,6 +77,8 @@ static inline decode_t decode(Instr_t raw_instr, const cpu_t *pcpu) {
     case Instr_SHL:
     case Instr_SHR:
     case Instr_Rot:
+    case Instr_SQRT:
+    case Instr_Pick:
         result.length = 1;
         break;
     case Instr_Push:
@@ -144,6 +147,16 @@ static inline uint32_t pop(cpu_t *pcpu) {
     return pcpu->stack[pcpu->sp--];
 }
 
+static inline uint32_t pick(cpu_t *pcpu, int32_t pos) {
+    assert(pcpu);
+    if (pcpu->sp - 1 < pos) {
+        printf("Out of bound picking\n");
+        pcpu->state = Cpu_Break;
+        return 0;
+    }
+    return pcpu->stack[pcpu->sp - pos];
+}
+
 
 int main(int argc, char **argv) {
 
@@ -154,7 +167,7 @@ int main(int argc, char **argv) {
         &&sr_Drop, &&sr_Over, &&sr_Mod, &&sr_Jump, 
         &&sr_And, &&sr_Or, &&sr_Xor,
         &&sr_SHL, &&sr_SHR,
-        &&sr_Rot, NULL /* This NULL seems to be essential to keep GCC from over-optimizing? */
+        &&sr_SQRT, &&sr_Rot, &&sr_Pick, NULL /* This NULL seems to be essential to keep GCC from over-optimizing? */
     };
     
     long long steplimit = LLONG_MAX;
@@ -171,8 +184,7 @@ int main(int argc, char **argv) {
                  .steps = 0, .stack = {0},
                  .pmem = Program};
     
-    uint32_t tmp1 = 0, tmp2 = 0;
-    uint64_t tmp3 = 0;
+    uint32_t tmp1 = 0, tmp2 = 0, tmp3 = 0;
     decode_t decoded = fetch_decode(&cpu);
     DISPATCH();
     do {
@@ -354,6 +366,20 @@ int main(int argc, char **argv) {
             push(&cpu, tmp1);
             push(&cpu, tmp3);
             push(&cpu, tmp2);
+            ADVANCE_PC();
+            decoded = fetch_decode(&cpu);
+            DISPATCH();
+        sr_SQRT:
+            tmp1 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, sqrt(tmp1));
+            ADVANCE_PC();
+            decoded = fetch_decode(&cpu);
+            DISPATCH();
+        sr_Pick:
+            tmp1 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, pick(&cpu, tmp1));
             ADVANCE_PC();
             decoded = fetch_decode(&cpu);
             DISPATCH();

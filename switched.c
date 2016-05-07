@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
+#include <math.h>
 
 #include "common.h"
 
@@ -77,6 +78,8 @@ static inline decode_t decode(Instr_t raw_instr, const cpu_t *pcpu) {
     case Instr_SHL:
     case Instr_SHR:
     case Instr_Rot:
+    case Instr_SQRT:
+    case Instr_Pick:
         result.length = 1;
         break;
     case Instr_Push:
@@ -122,6 +125,16 @@ static inline uint32_t pop(cpu_t *pcpu) {
         return 0;
     }
     return pcpu->stack[pcpu->sp--];
+}
+
+static inline uint32_t pick(cpu_t *pcpu, int32_t pos) {
+    assert(pcpu);
+    if (pcpu->sp - 1 < pos) {
+        printf("Out of bound picking\n");
+        pcpu->state = Cpu_Break;
+        return 0;
+    }
+    return pcpu->stack[pcpu->sp - pos];
 }
 
 int main(int argc, char **argv) {
@@ -279,6 +292,16 @@ int main(int argc, char **argv) {
             push(&cpu, tmp1);
             push(&cpu, tmp3);
             push(&cpu, tmp2);
+            break;
+        case Instr_SQRT:
+            tmp1 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, sqrt(tmp1));
+            break;
+        case Instr_Pick:
+            tmp1 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, pick(&cpu, tmp1));
             break;
         case Instr_Break:
             cpu.state = Cpu_Break;

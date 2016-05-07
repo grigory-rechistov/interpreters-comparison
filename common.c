@@ -64,8 +64,9 @@ const Instr_t Primes[PROGRAM_SIZE] = {
 
 const Instr_t Instr_Rot_Test[PROGRAM_SIZE] = {
     Instr_Push, 1,
-    Instr_Push, 5,
-    Instr_Push, 8,
+    Instr_Push, 2,
+    Instr_Push, 3,
+    Instr_Push, 4,
     Instr_Rot,
     Instr_Halt
 };
@@ -98,9 +99,27 @@ const Instr_t Instr_SHx_Test[PROGRAM_SIZE] = {
    Instr_Halt
 };
 
+const Instr_t Instr_SQRT_Test[PROGRAM_SIZE] = {
+   Instr_Push, 9,
+   Instr_SQRT,
+   Instr_Halt
+};
+
+const Instr_t Instr_Pick_Test[PROGRAM_SIZE] = {
+   Instr_Push, 1,
+   Instr_Push, 2,
+   Instr_Push, 3,
+   Instr_Push, 4,
+   Instr_Push, 0,
+   Instr_Push, 5,
+   Instr_Push, 3,
+   Instr_Pick,
+   Instr_Halt
+};
+
 /* Choose a program we are about to simulate */
 //const Instr_t* Program = Primes;
-const Instr_t* Program = Instr_SHx_Test;
+const Instr_t* Program = Instr_Pick_Test;
 
 /* Other programs, kept here just for reference */
 const Instr_t OldProgram[PROGRAM_SIZE] = {

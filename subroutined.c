@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
+#include <math.h>
 
 #include "common.h"
 
@@ -79,6 +80,8 @@ static inline decode_t decode(Instr_t raw_instr, const cpu_t *pcpu) {
     case Instr_SHL:
     case Instr_SHR:
     case Instr_Rot:
+    case Instr_SQRT:
+    case Instr_Pick:
         result.length = 1;
         break;
     case Instr_Push:
@@ -128,6 +131,16 @@ static inline uint32_t pop(cpu_t *pcpu) {
         return 0;
     }
     return pcpu->stack[pcpu->sp--];
+}
+
+static inline uint32_t pick(cpu_t *pcpu, int32_t pos) {
+    assert(pcpu);
+    if (pcpu->sp - 1 < pos) {
+        printf("Out of bound picking\n");
+        pcpu->state = Cpu_Break;
+        return 0;
+    }
+    return pcpu->stack[pcpu->sp - pos];
 }
 
 typedef void (*service_routine_t)(cpu_t *pcpu, decode_t* pdecode);
@@ -291,6 +304,18 @@ void sr_Jump(cpu_t *pcpu, decode_t *pdecoded) {
     pcpu->pc += pdecoded->immediate;
 }
 
+void sr_SQRT(cpu_t *pcpu, decode_t *pdecoded) {
+    uint32_t tmp1 = pop(pcpu);
+    BAIL_ON_ERROR();
+    push(pcpu, sqrt(tmp1));
+}
+
+void sr_Pick(cpu_t *pcpu, decode_t *pdecoded) {
+    uint32_t tmp1 = pop(pcpu);
+    BAIL_ON_ERROR();
+    push(pcpu, pick(pcpu, tmp1));
+}
+
 void sr_Break(cpu_t *pcpu, decode_t *pdecoded) {
     pcpu->state = Cpu_Break;
     /* No need to dispatch after Break */
@@ -304,7 +329,8 @@ service_routine_t service_routines[] = {
         &sr_Drop, &sr_Over, &sr_Mod, &sr_Jump,
         &sr_And, &sr_Or, &sr_Xor,
         &sr_SHR, &sr_SHL,
-        &sr_Rot
+        &sr_SQRT,
+        &sr_Rot, &sr_Pick
     };
 
 int main(int argc, char **argv) {    
