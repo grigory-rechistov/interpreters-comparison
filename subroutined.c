@@ -328,7 +328,7 @@ service_routine_t service_routines[] = {
         &sr_Add, &sr_Sub, &sr_Mul, &sr_Rand, &sr_Dec,
         &sr_Drop, &sr_Over, &sr_Mod, &sr_Jump,
         &sr_And, &sr_Or, &sr_Xor,
-        &sr_SHR, &sr_SHL,
+        &sr_SHL, &sr_SHR,
         &sr_SQRT,
         &sr_Rot, &sr_Pick
     };
