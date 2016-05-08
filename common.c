@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 #include <limits.h>
 #include <errno.h>
 #include <string.h>
+#include <assert.h>
 
 #include "common.h"
 
@@ -173,8 +174,9 @@ long long parse_args(int argc, char** argv) {
             fprintf(stderr, "Can't allocate memory for input program.\n");
             exit(2);
         }
-        fread(LoadedProgram, filelen, 1, prog_file); // Read in the entire file
-        fclose(prog_file);                           // Close the file
+        size_t act_read = fread(LoadedProgram, 1, filelen, prog_file); // Read in the entire file
+        assert(filelen == act_read);
+        fclose(prog_file);
     }
 
     return steplimit;
