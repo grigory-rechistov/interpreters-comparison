@@ -138,25 +138,29 @@ long long parse_args(int argc, char** argv) {
 
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help"))
-            report_usage_and_exit(argv[0], 2);
+            report_usage_and_exit(argv[0], 0);
         else if (!strncmp(argv[i], steplimit_opt, strlen(steplimit_opt))) {
             char *endptr = NULL;
             steplimit = strtoll(argv[i] + strlen(steplimit_opt), &endptr, 10);
             if (errno || (*endptr != '\0')) {
-                fprintf(stderr, "Unrecognized steplimit: %s\a", argv[i]);
+                fprintf(stderr, "Invalid steplimit: %s\n", argv[i]);
                 report_usage_and_exit(argv[0], 2);
             }
-        }
-        else if (!strncmp(argv[i], inp_prog_opt, strlen(inp_prog_opt))) {
+        } else if (!strncmp(argv[i], inp_prog_opt, strlen(inp_prog_opt))) {
             prog_file = fopen(argv[i] + strlen(inp_prog_opt), "rb");
             if (errno || prog_file == NULL) {
-                fprintf(stderr, "Unrecognized program file: %s\n", argv[i]);
+                fprintf(stderr, "Cannot open target program file: %s\n", argv[i]);
                 report_usage_and_exit(argv[0], 2);
             }
-        }
-        else {
-            fprintf(stderr, "Unrecognized option: %s\n", argv[i]);
-            report_usage_and_exit(argv[0], 2);
+        } else {
+            /* Handle positional arguments */
+            /* For now, we only have steplimit */
+            char *endptr = NULL;
+            steplimit = strtoll(argv[i], &endptr, 10);
+            if (errno || (*endptr != '\0')) {
+                fprintf(stderr, "Unrecognized option: %s\n", argv[i]);
+                report_usage_and_exit(argv[0], 2);
+            }
         }
     }
 
@@ -171,7 +175,7 @@ long long parse_args(int argc, char** argv) {
         }
         LoadedProgram = (Instr_t*) calloc(filelen, sizeof(Instr_t)); // Enough memory for file
         if (LoadedProgram == NULL) {
-            fprintf(stderr, "Can't allocate memory for input program.\n");
+            fprintf(stderr, "Failed to allocate memory for input program.\n");
             exit(2);
         }
         size_t act_read = fread(LoadedProgram, 1, filelen, prog_file); // Read in the entire file
