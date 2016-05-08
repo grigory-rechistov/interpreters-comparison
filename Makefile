@@ -26,14 +26,14 @@ COMPILE.c = $(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c
 POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d
 
 %.o: %.c $(DEPDIR)/%.d
-	$(COMPILE.c) $(OUTPUT_OPTION) $<
+	$(COMPILE.c) $(OUTPUT_OPTION) $< 
 	$(POSTCOMPILE)
 
 $(DEPDIR)/%.d: ;
 .PRECIOUS: $(DEPDIR)/%.d
 -include $(patsubst %,$(DEPDIR)/%.d,$(basename $(ALL_SRCS)))
 
-$(ALL): $(COMMON_OBJ)
+$(ALL): $(COMMON_OBJ) -lm
 
 # #######################
 # Individual applications

@@ -59,6 +59,14 @@ Instr_Drop   = 0x000f,
 Instr_Over   = 0x0010,
 Instr_Mod    = 0x0011,
 Instr_Jump   = 0x0012, /* imm */
+Instr_And    = 0x0013,
+Instr_Or     = 0x0014,
+Instr_Xor    = 0x0015,
+Instr_SHL    = 0x0016,
+Instr_SHR    = 0x0017,
+Instr_SQRT   = 0x0018,
+Instr_Rot    = 0x0019,
+Instr_Pick   = 0x001a,
 
 };
 

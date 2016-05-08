@@ -75,6 +75,61 @@ const Instr_t* DefProgram = Primes;
 /* Pointer to a loaded program */
 Instr_t* LoadedProgram = NULL;
 
+const Instr_t Instr_Rot_Test[PROGRAM_SIZE] = {
+    Instr_Push, 1,
+    Instr_Push, 2,
+    Instr_Push, 3,
+    Instr_Push, 4,
+    Instr_Rot,
+    Instr_Halt
+};
+
+const Instr_t Instr_Logic_Test[PROGRAM_SIZE] = {
+   Instr_Push, 1,
+   Instr_Push, 2,
+   Instr_Xor,
+   Instr_Print,
+   Instr_Push, 1,
+   Instr_Push, 2,
+   Instr_Or,
+   Instr_Print,
+   Instr_Push, 1,
+   Instr_Push, 2,
+   Instr_And,
+   Instr_Print,
+   Instr_Halt
+};
+
+const Instr_t Instr_SHx_Test[PROGRAM_SIZE] = {
+   Instr_Push, 1,
+   Instr_Push, 3,
+   Instr_SHL,
+   Instr_Print,
+   Instr_Push, 1,
+   Instr_Push, 3,
+   Instr_SHR,
+   Instr_Print,
+   Instr_Halt
+};
+
+const Instr_t Instr_SQRT_Test[PROGRAM_SIZE] = {
+   Instr_Push, 9,
+   Instr_SQRT,
+   Instr_Halt
+};
+
+const Instr_t Instr_Pick_Test[PROGRAM_SIZE] = {
+   Instr_Push, 1,
+   Instr_Push, 2,
+   Instr_Push, 3,
+   Instr_Push, 4,
+   Instr_Push, 0,
+   Instr_Push, 5,
+   Instr_Push, 3,
+   Instr_Pick,
+   Instr_Halt
+};
+
 /* Other programs, kept here just for reference */
 const Instr_t OldProgram[PROGRAM_SIZE] = {
     Instr_Nop,

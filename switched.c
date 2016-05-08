@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
+#include <math.h>
 
 #include "common.h"
 
@@ -70,6 +71,15 @@ static inline decode_t decode(Instr_t raw_instr, const cpu_t *pcpu) {
     case Instr_Drop:
     case Instr_Over:
     case Instr_Mod:
+    /* Added instructions */
+    case Instr_And:
+    case Instr_Or:
+    case Instr_Xor:
+    case Instr_SHL:
+    case Instr_SHR:
+    case Instr_Rot:
+    case Instr_SQRT:
+    case Instr_Pick:
         result.length = 1;
         break;
     case Instr_Push:
@@ -117,6 +127,16 @@ static inline uint32_t pop(cpu_t *pcpu) {
     return pcpu->stack[pcpu->sp--];
 }
 
+static inline uint32_t pick(cpu_t *pcpu, int32_t pos) {
+    assert(pcpu);
+    if (pcpu->sp - 1 < pos) {
+        printf("Out of bound picking\n");
+        pcpu->state = Cpu_Break;
+        return 0;
+    }
+    return pcpu->stack[pcpu->sp - pos];
+}
+
 int main(int argc, char **argv) {
     long long steplimit = parse_args(argc, argv);
     cpu_t cpu = init_cpu();
@@ -126,7 +146,7 @@ int main(int argc, char **argv) {
         BAIL_ON_ERROR();
         decode_t decoded = decode(raw_instr, &cpu);
 
-        uint32_t tmp1 = 0, tmp2 = 0;
+        uint32_t tmp1 = 0, tmp2 = 0, tmp3 = 0;
         /* Execute - a big switch */
         switch(decoded.opcode) {
         case Instr_Nop:
@@ -222,6 +242,55 @@ int main(int argc, char **argv) {
             break;
         case Instr_Jump:
             cpu.pc += decoded.immediate;
+            break;
+        case Instr_And:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 & tmp2);
+            break;
+        case Instr_Or:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 | tmp2);
+            break;
+        case Instr_Xor:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 ^ tmp2);
+            break;
+        case Instr_SHL:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 << tmp2);
+            break;
+        case Instr_SHR:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1 >> tmp2);
+            break;
+        case Instr_Rot:
+            tmp1 = pop(&cpu);
+            tmp2 = pop(&cpu);
+            tmp3 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, tmp1);
+            push(&cpu, tmp3);
+            push(&cpu, tmp2);
+            break;
+        case Instr_SQRT:
+            tmp1 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, sqrt(tmp1));
+            break;
+        case Instr_Pick:
+            tmp1 = pop(&cpu);
+            BAIL_ON_ERROR();
+            push(&cpu, pick(&cpu, tmp1));
             break;
         case Instr_Break:
             cpu.state = Cpu_Break;
