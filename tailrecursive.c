@@ -216,7 +216,7 @@ void sr_Add(cpu_t *pcpu, decode_t *pdecoded) {
     *pdecoded = fetch_decode(pcpu);
     DISPATCH();
 }
-    
+
 void sr_Sub(cpu_t *pcpu, decode_t *pdecoded) {
     uint32_t tmp1 = pop(pcpu);
     uint32_t tmp2 = pop(pcpu);
@@ -316,23 +316,13 @@ service_routine_t service_routines[] = {
         &sr_Drop, &sr_Over, &sr_Mod, &sr_Jump
     };
 
-int main(int argc, char **argv) {    
-    if (argc > 1) {
-        char *endptr = NULL;
-        steplimit = strtoll(argv[1], &endptr, 10);
-        if (errno || (*endptr != '\0')) {
-            fprintf(stderr, "Usage: %s [steplimit]\n", argv[0]);
-            return 2;
-        }
-    }
-    
-    cpu_t cpu = {.pc = 0, .sp = -1, .state = Cpu_Running, 
-                 .steps = 0, .stack = {0},
-                 .pmem = Program};
-    
+int main(int argc, char **argv) {
+    steplimit = parse_args(argc, argv);
+    cpu_t cpu = init_cpu();
+
     decode_t decoded = fetch_decode(&cpu);
     service_routines[decoded.opcode](&cpu, &decoded);
-    
+
     assert(cpu.state != Cpu_Running || cpu.steps == steplimit);
     /* Print CPU state */
     printf("CPU executed %lld steps. End state \"%s\".\n",
@@ -344,7 +334,9 @@ int main(int argc, char **argv) {
         printf("%#10x ", cpu.stack[i]);
     }
     printf("%s\n", cpu.sp == -1? "(empty)": "");
-    
+
+    free(LoadedProgram);
+
     return cpu.state == Cpu_Halted ||
            (cpu.state == Cpu_Running &&
             cpu.steps == steplimit)?0:1;

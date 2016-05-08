@@ -33,13 +33,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 #ifndef COMMON_H_
 #define COMMON_H_
 
-/* Instruction Set Architecture: 
+/* Instruction Set Architecture:
    opcodes and arguments for individual instructions.
-   Those marked with "imm" use the next machine word 
+   Those marked with "imm" use the next machine word
    in program memory as a signed immediate operand.
  */
 enum {
-Instr_Break  = 0x0000,/* Abnormal end; 
+Instr_Break  = 0x0000,/* Abnormal end;
                          all unitialized memory will trigger a stop */
 Instr_Nop    = 0x0001,
 Instr_Halt   = 0x0002, /* Normal program end */
@@ -73,7 +73,9 @@ typedef uint32_t Instr_t;
 /* The code for target program for an interpreter to simulate */
 #define PROGRAM_SIZE 512
 
-extern const Instr_t* Program;
+extern const Instr_t* DefProgram;
+
+extern Instr_t* LoadedProgram;
 
 #define STACK_CAPACITY 32
 /* A struct to store information about a decoded instruction */
@@ -98,5 +100,8 @@ typedef struct {
     const Instr_t *pmem; /* Program Memory */
 } cpu_t;
 
+cpu_t init_cpu ();
+long long parse_args(int argc, char** argv);
+void write_program (Instr_t* program, size_t program_size, const char* out_file);
 
 #endif /* COMMON_H_ */

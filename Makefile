@@ -71,7 +71,7 @@ clean:
 
 # Do a quick check that code builds and runs for at least several steps
 sanity: all
-	for APP in $(ALL); do ./$$APP 100 > /dev/null; done
+	for APP in $(ALL); do ./$$APP --steplimit=100 > /dev/null; done
 	@echo "Sanity OK"
 
 ### Inferior, faulty, broken etc targets, not built by default

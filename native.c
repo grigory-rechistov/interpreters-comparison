@@ -39,14 +39,14 @@ int main() {
     /* This program cannot be used for performance comparisons if the target
        program chosen for simulation is different from Primes.
        Warn and refuse to work instead of giving user bogus numbers */
-    if (Program != Primes) {
+    if (DefProgram != Primes) {
         fprintf(stderr,
             "This executable can only execute Primes, but another target"
             " program was chosen. The results would be incomparable."
             " Please fix your code\n");
         return 1;
     }
-    
+
     for (int i = 2; i < 100000; i++) {
         bool is_prime = true;
         for (int divisor = 2; divisor < i; divisor++) {

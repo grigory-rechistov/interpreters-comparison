@@ -199,7 +199,7 @@ void sr_Add() {
     push(pcpu, tmp1 + tmp2);
     ADVANCE_PC(1);
 }
-    
+
 void sr_Sub() {
     uint32_t tmp1 = pop(pcpu);
     uint32_t tmp2 = pop(pcpu);
@@ -243,7 +243,7 @@ void sr_Drop() {
 }
 
 void sr_Je(int32_t immediate) {
-    uint32_t tmp1 = pop(pcpu);    
+    uint32_t tmp1 = pop(pcpu);
     if (tmp1 == 0)
         pcpu->pc += immediate;
     ADVANCE_PC(2);
@@ -264,7 +264,7 @@ void sr_Jump(int32_t immediate) {
     pcpu->pc += immediate;
     ADVANCE_PC(2);
     /* Non-sequential PC change */
-    exit_generated_code();    
+    exit_generated_code();
 }
 
 void sr_Break() {
@@ -285,7 +285,7 @@ static void translate_program(const Instr_t *prog,
     assert(prog);
     assert(out_code);
     assert(entrypoints);
-    
+
     /* An IA-32 instruction "MOV RDI, imm32" is used to pass a parameter
        to a function invoked by a following CALL. */
 #ifdef __CYGWIN__ /* Win64 ABI, use RCX instead of RDI */
@@ -294,21 +294,21 @@ static void translate_program(const Instr_t *prog,
     const char mov_template_code[]= {0x48, 0xc7, 0xc7, 0x00, 0x00, 0x00, 0x00};
 #endif
     const int mov_template_size = sizeof(mov_template_code);
-    
+
     /* An IA-32 instruction "CALL rel32" is used as a trampoline to invoke
        service routines. A template for it is "call .+0x00000005" */
     const char call_template_code[] = { 0xe8, 0x00, 0x00, 0x00, 0x00 };
     const int call_template_size = sizeof(call_template_code);
-    
+
     int i = 0; /* Address of current guest instruction */
     char* cur = out_code; /* Where to put new code */
-    
+
     /* The program is short, so we can translate it as a whole.
        Otherwise, some sort of lazy decoding will be required */
     while (i < len) {
         decode_t decoded = decode_at_address(prog, i);
         entrypoints[i] = (void*) cur;
-        
+
         if (decoded.length == 2) { /* Guest instruction has an immediate */
             assert(cur + mov_template_size - out_code < JIT_CODE_SIZE);
             memcpy(cur, mov_template_code, mov_template_size);
@@ -316,7 +316,7 @@ static void translate_program(const Instr_t *prog,
             memcpy(cur + 3, &decoded.immediate, 4);
             cur += mov_template_size;
         }
-        
+
         assert(cur + call_template_size - out_code < JIT_CODE_SIZE);
         memcpy(cur, call_template_code, call_template_size);
         intptr_t offset = (intptr_t)service_routines[decoded.opcode]
@@ -335,21 +335,12 @@ static void translate_program(const Instr_t *prog,
     }
 }
 
-int main(int argc, char **argv) {    
-    if (argc > 1) {
-        char *endptr = NULL;
-        steplimit = strtoll(argv[1], &endptr, 10);
-        if (errno || (*endptr != '\0')) {
-            fprintf(stderr, "Usage: %s [steplimit]\n", argv[0]);
-            exit(2);
-        }
-    }
-    
-    cpu_t cpu = {.pc = 0, .sp = -1, .state = Cpu_Running, 
-                 .steps = 0, .stack = {0},
-                 .pmem = Program};
+int main(int argc, char **argv) {
+    steplimit = parse_args(argc, argv);
+    cpu_t cpu = init_cpu();
+
     pcpu = &cpu;
-    
+
     /* Code section is protected from writes by default, un-protect it */
     if (mprotect(gen_code, JIT_CODE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC)) {
         perror("mprotect");
@@ -359,11 +350,11 @@ int main(int argc, char **argv) {
        This will help to catch jumps to wrong locations */
     memset(gen_code, 0xcc, JIT_CODE_SIZE);
     void* entrypoints[PROGRAM_SIZE] = {0}; /* a map of guest PCs to capsules */
-    
+
     translate_program(cpu.pmem, gen_code, entrypoints, PROGRAM_SIZE);
-    
+
     setjmp(return_buf); /* Will get here from generated code. */
-    
+
     while (cpu.state == Cpu_Running && cpu.steps < steplimit) {
         if (cpu.pc > PROGRAM_SIZE) {
             cpu.state = Cpu_Break;
@@ -371,7 +362,7 @@ int main(int argc, char **argv) {
         }
         enter_generated_code(entrypoints[cpu.pc]); /* Will not return */
     }
-    
+
     assert(cpu.state != Cpu_Running || cpu.steps == steplimit);
     /* Print CPU state */
     printf("CPU executed %lld steps. End state \"%s\".\n",
@@ -383,7 +374,9 @@ int main(int argc, char **argv) {
         printf("%#10x ", cpu.stack[i]);
     }
     printf("%s\n", cpu.sp == -1? "(empty)": "");
-    
+
+    free(LoadedProgram);
+
     return cpu.state == Cpu_Halted ||
            (cpu.state == Cpu_Running &&
             cpu.steps == steplimit)?0:1;

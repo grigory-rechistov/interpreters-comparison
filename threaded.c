@@ -104,7 +104,7 @@ static inline decode_t fetch_decode(cpu_t *pcpu) {
 #define DISPATCH() do {\
     goto *service_routines[decoded.opcode];   \
    } while(0);
-    
+
 /*
 #define DISPATCH() \
 __asm__ __volatile__("mov    (%0, %1, 8), %%rcx\n" \
@@ -147,27 +147,16 @@ int main(int argc, char **argv) {
         &&sr_Add, &&sr_Sub, &&sr_Mul, &&sr_Rand, &&sr_Dec,
         &&sr_Drop, &&sr_Over, &&sr_Mod, &&sr_Jump, NULL /* This NULL seems to be essential to keep GCC from over-optimizing? */
     };
-    
-    long long steplimit = LLONG_MAX;
-    if (argc > 1) {
-        char *endptr = NULL;
-        steplimit = strtoll(argv[1], &endptr, 10);
-        if (errno || (*endptr != '\0')) {
-            fprintf(stderr, "Usage: %s [steplimit]\n", argv[0]);
-            return 2;
-        }
-    }
-    
-    cpu_t cpu = {.pc = 0, .sp = -1, .state = Cpu_Running, 
-                 .steps = 0, .stack = {0},
-                 .pmem = Program};
-    
+
+    long long steplimit = parse_args(argc, argv);
+    cpu_t cpu = init_cpu();
+
     uint32_t tmp1 = 0, tmp2 = 0;
     uint64_t tmp3 = 0;
     decode_t decoded = fetch_decode(&cpu);
     DISPATCH();
     do {
-        
+
         sr_Nop:
             /* Do nothing */
             ADVANCE_PC();
@@ -302,7 +291,7 @@ int main(int argc, char **argv) {
             ADVANCE_PC();
             /* No need to dispatch after Break */
     } while(cpu.state == Cpu_Running);
-    
+
     assert(cpu.state != Cpu_Running || cpu.steps == steplimit);
     /* Print CPU state */
     printf("CPU executed %lld steps. End state \"%s\".\n",
@@ -314,7 +303,9 @@ int main(int argc, char **argv) {
         printf("%#10x ", cpu.stack[i]);
     }
     printf("%s\n", cpu.sp == -1? "(empty)": "");
-    
+
+    free(LoadedProgram);
+
     return cpu.state == Cpu_Halted ||
            (cpu.state == Cpu_Running &&
             cpu.steps == steplimit)?0:1;
