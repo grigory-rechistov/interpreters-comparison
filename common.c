@@ -142,7 +142,7 @@ long long parse_args(int argc, char** argv) {
             char *endptr = NULL;
             steplimit = strtoll(argv[i] + strlen(steplimit_opt), &endptr, 10);
             if (errno || (*endptr != '\0')) {
-                fprintf(stderr, "Unrecognized steplimit: %s\a", argv[i]);
+                fprintf(stderr, "Unrecognized steplimit: %s\a\n", argv[i]);
                 report_usage_and_exit(argv[0], 2);
             }
         }
@@ -154,8 +154,12 @@ long long parse_args(int argc, char** argv) {
             }
         }
         else {
-            fprintf(stderr, "Unrecognized option: %s\n", argv[i]);
-            report_usage_and_exit(argv[0], 2);
+            char *endptr = NULL;
+            steplimit = strtoll(argv[i], &endptr, 10);
+            if (errno || (*endptr != '\0')) {
+                fprintf(stderr, "Unrecognized option: %s\a\n", argv[i]);
+                report_usage_and_exit(argv[0], 2);
+            }
         }
     }
 
