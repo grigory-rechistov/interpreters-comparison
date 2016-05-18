@@ -1,24 +1,103 @@
-const char str_printf[] = "[%d]\n";
-const char str_pop[] = "Stack underflow\n";
-const char str_push[] = "Stack overflow\n";
+#ifndef TRANSLATED_INLINE_H_
+#define TRANSLATED_INLINE_H_
 
+/* Strings for capsules. It's used for substitution address. Before call
+printf or puts fuction address have been placed in edi register. */
+extern const char str_printf[]; /* "[%d]\n" */
+extern const char str_pop[];    /* "Stack underflow\n" */
+extern const char str_push[];   /* "Stack overflow\n" */
+
+/* Later in the file disassembler capsules go first, capsules go after.
+In disassembler uses definitions:
+$<imm>          - in that place should to copy immediate. If it's Branch capsule,
+                  you should to copy (immediate + 2).
+$<str_pop>      - in that place should to copy absolute address of str_pop
+$<str_push>     - in that place should to copy absolute address of str_push
+$<str_printf>   - in that place should to copy absolute address of str_printf
+<rand>          - in that place should to copy relative address of rand function
+<push>          - in that place should to copy relative address of push function
+<puts>          - in that place should to copy relative address of puts function
+<abort>         - in that place should to copy relative address of abort function
+<printf>        - in that place should to copy relative address of printf function
+<exit_generated_code> - in that place should to copy relative address of
+                        exit_generated_code function */
+
+/*  <bin_sr_Break>:
+    41 83 07 01             addl   $0x1,(%r15)
+    49 83 47 10 01          addq   $0x1,0x10(%r15)
+    41 c7 47 08 02 00 00    movl   $0x2,0x8(%r15)
+    00
+    e8 a4 0f 00 00          callq  <exit_generated_code> */
 const char bin_sr_Break[] = {
 0x41, 0x83, 0x07, 0x01, 0x49, 0x83, 0x47, 0x10, 0x01, 0x41, 0xc7, 0x47, 0x08, 0x02,
 0x00, 0x00, 0x00, 0xe8, 0xa4, 0x0f, 0x00, 0x00
 };
 
+/*  <bin_sr_Nop>:
+    49 8b 4f 10             mov    0x10(%r15),%rcx
+    41 8b 47 08             mov    0x8(%r15),%eax
+    41 83 07 01             addl   $0x1,(%r15)
+    48 8d 51 01             lea    0x1(%rcx),%rdx
+    85 c0                   test   %eax,%eax
+    49 89 57 10             mov    %rdx,0x10(%r15)
+    75 11                   jne    407049 <bin_sr_Nop+0x29>
+    48 b8 ff ff ff ff ff    movabs $0x7fffffffffffffff,%rax
+    ff ff 7f
+    48 39 c2                cmp    %rax,%rdx
+    74 02                   je     407049 <bin_sr_Nop+0x29>
+    eb 07                   jmp    407050 <bin_sr_Break>
+    31 c0                   xor    %eax,%eax
+    e8 87 0f 00 00          callq  <exit_generated_code> */
 const char bin_sr_Nop[] = {
-0x49, 0x8b, 0x4f, 0x10, 0x41, 0x8b, 0x47, 0x08, 0x41, 0x83, 0x07, 0x01, 0x48, 0x8d, 
-0x51, 0x01, 0x85, 0xc0, 0x49, 0x89, 0x57, 0x10, 0x75, 0x11, 0x48, 0xb8, 0xff, 0xff, 
-0xff, 0xff, 0xff, 0xff, 0xff, 0x7f, 0x48, 0x39, 0xc2, 0x74, 0x02, 0xeb, 0x07, 0x31, 
+0x49, 0x8b, 0x4f, 0x10, 0x41, 0x8b, 0x47, 0x08, 0x41, 0x83, 0x07, 0x01, 0x48, 0x8d,
+0x51, 0x01, 0x85, 0xc0, 0x49, 0x89, 0x57, 0x10, 0x75, 0x11, 0x48, 0xb8, 0xff, 0xff,
+0xff, 0xff, 0xff, 0xff, 0xff, 0x7f, 0x48, 0x39, 0xc2, 0x74, 0x02, 0xeb, 0x07, 0x31,
 0xc0, 0xe8, 0x87, 0x0f, 0x00, 0x00
 };
 
+/*  <bin_sr_Halt>:
+    41 83 07 01             addl   $0x1,(%r15)
+    49 83 47 10 01          addq   $0x1,0x10(%r15)
+    41 c7 47 08 01 00 00    movl   $0x1,0x8(%r15)
+    00
+    e8 a4 0f 00 00          callq  <exit_generated_code> */
 const char bin_sr_Halt[] = {
-0x41, 0x83, 0x07, 0x01, 0x49, 0x83, 0x47, 0x10, 0x01, 0x41, 0xc7, 0x47, 0x08, 0x01, 
+0x41, 0x83, 0x07, 0x01, 0x49, 0x83, 0x47, 0x10, 0x01, 0x41, 0xc7, 0x47, 0x08, 0x01,
 0x00, 0x00, 0x00, 0xe8, 0xa4, 0x0f, 0x00, 0x00
 };
 
+/*  <bin_sr_Push>:
+    4d 85 ff                test   %r15,%r15
+    74 66                   je     406feb <bin_sr_Push+0x6b>
+    41 8b 47 04             mov    0x4(%r15),%eax
+    4c 89 fb                mov    %r15,%rbx
+    83 f8 1e                cmp    $0x1e,%eax
+    7f 42                   jg     406fd3 <bin_sr_Push+0x53>
+    83 c0 01                add    $0x1,%eax
+    41 8b 57 08             mov    0x8(%r15),%edx
+    41 89 47 04             mov    %eax,0x4(%r15)
+    48 98                   cltq
+    41 c7 44 87 18 11 11    movl   $<imm>,0x18(%r15,%rax,4)
+    11 11
+    49 8b 47 10             mov    0x10(%r15),%rax
+    41 83 07 02             addl   $0x2,(%r15)
+    48 83 c0 01             add    $0x1,%rax
+    85 d2                   test   %edx,%edx
+    49 89 47 10             mov    %rax,0x10(%r15)
+    75 11                   jne    406fcc <bin_sr_Push+0x4c>
+    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    ff ff 7f
+    48 39 d0                cmp    %rdx,%rax
+    74 02                   je     406fcc <bin_sr_Push+0x4c>
+    eb 24                   jmp    406ff0 <bin_sr_Halt>
+    31 c0                   xor    %eax,%eax
+    e8 6a 0f 00 00          callq  <exit_generated_code>
+    bf e6 50 40 00          mov    $<push>,%edi
+    e8 f0 f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 52 0f 00 00          callq  <exit_generated_code>
+    e8 67 ff ff ff          callq  <abort> */
 const char bin_sr_Push[] = {
 0x4d, 0x85, 0xff, 0x74, 0x66, 0x41, 0x8b, 0x47, 0x04, 0x4c, 0x89, 0xfb, 0x83, 0xf8,
 0x1e, 0x7f, 0x42, 0x83, 0xc0, 0x01, 0x41, 0x8b, 0x57, 0x08, 0x41, 0x89, 0x47, 0x04,
@@ -30,6 +109,42 @@ const char bin_sr_Push[] = {
 0x00, 0x00, 0x31, 0xc0, 0xe8, 0x52, 0x0f, 0x00, 0x00, 0xe8, 0x67, 0xff, 0xff, 0xff
 };
 
+/*  <bin_sr_Print>:
+    4d 85 ff                test   %r15,%r15
+    53                      push   %rbx
+    74 6e                   je     406f74 <bin_sr_Print+0x74>
+    49 63 47 04             movslq 0x4(%r15),%rax
+    4c 89 fb                mov    %r15,%rbx
+    85 c0                   test   %eax,%eax
+    78 4b                   js     406f5c <bin_sr_Print+0x5c>
+    8d 50 ff                lea    -0x1(%rax),%edx
+    41 8b 74 87 18          mov    0x18(%r15,%rax,4),%esi
+    bf 00 00 00 00          mov    $<str_printf>,%edi
+    31 c0                   xor    %eax,%eax
+    41 89 57 04             mov    %edx,0x4(%r15)
+    e8 00 00 00 00          callq  <printf>
+    49 8b 4f 10             mov    0x10(%r15),%rcx
+    41 8b 47 08             mov    0x8(%r15),%eax
+    41 83 07 01             addl   $0x1,(%r15)
+    48 8d 51 01             lea    0x1(%rcx),%rdx
+    85 c0                   test   %eax,%eax
+    49 89 57 10             mov    %rdx,0x10(%r15)
+    75 14                   jne    406f55 <bin_sr_Print+0x55>
+    48 b8 ff ff ff ff ff    movabs $0x7fffffffffffffff,%rax
+    ff ff 7f
+    48 39 c2                cmp    %rax,%rdx
+    74 05                   je     406f55 <bin_sr_Print+0x55>
+    31 c0                   xor    %eax,%eax
+    5b                      pop    %rbx
+    eb 24                   jmp    406f79 <bin_sr_Print+0x79>
+    31 c0                   xor    %eax,%eax
+    e8 00 00 00 00          callq  <exit_generated_code>
+    bf 00 00 00 00          mov    $<str_pop>,%edi
+    e8 00 00 00 00          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 00 00 00 00          callq  <exit_generated_code>
+    e8 00 00 00 00          callq  <abort> */
 const char bin_sr_Print[] = {
 0x4d, 0x85, 0xff, 0x53, 0x74, 0x6e, 0x49, 0x63, 0x47, 0x04, 0x4c, 0x89, 0xfb, 0x85,
 0xc0, 0x78, 0x4b, 0x8d, 0x50, 0xff, 0x41, 0x8b, 0x74, 0x87, 0x18, 0xbf, 0x00, 0x00,
@@ -42,9 +157,42 @@ const char bin_sr_Print[] = {
 0x00, 0x00, 0x00, 0x00, 0xe8, 0x00, 0x00, 0x00, 0x00
 };
 
+/*  <bin_sr_Jne>:
+    4d 85 ff                test   %r15,%r15
+    74 6e                   je     406ef3 <bin_sr_Jne+0x73>
+    49 63 47 04             movslq 0x4(%r15),%rax
+    4c 89 fb                mov    %r15,%rbx
+    85 c0                   test   %eax,%eax
+    78 4b                   js     406edb <bin_sr_Jne+0x5b>
+    8d 50 ff                lea    -0x1(%rax),%edx
+    41 8b 44 87 18          mov    0x18(%r15,%rax,4),%eax
+    41 89 57 04             mov    %edx,0x4(%r15)
+    85 c0                   test   %eax,%eax
+    75 28                   jne    406ec8 <bin_sr_Jne+0x48>
+    49 8b 47 10             mov    0x10(%r15),%rax
+    41 83 07 02             addl   $0x2,(%r15)
+    48 83 c0 01             add    $0x1,%rax
+    41 83 7f 08 00          cmpl   $0x0,0x8(%r15)
+    49 89 47 10             mov    %rax,0x10(%r15)
+    75 1d                   jne    406ed4 <bin_sr_Jne+0x54>
+    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    ff ff 7f
+    48 39 d0                cmp    %rdx,%rax
+    74 0e                   je     406ed4 <bin_sr_Jne+0x54>
+    eb 30                   jmp    406ef8 <bin_sr_Jne+0x78>
+    41 81 07 13 11 11 11    addl   $<imm>,(%r15)
+    49 83 47 10 01          addq   $0x1,0x10(%r15)
+    31 c0                   xor    %eax,%eax
+    e8 62 0f 00 00          callq  <exit_generated_code>
+    bf e5 50 40 00          mov    $<str_pop>,%edi
+    e8 e8 f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 4a 0f 00 00          callq  <exit_generated_code>
+    e8 5f ff ff ff          callq  <abort> */
 const char bin_sr_Jne[] = {
-0x4d, 0x85, 0xff, 0x74, 0x6e, 0x49, 0x63, 0x47, 0x04, 0x4c, 0x89, 0xfb, 0x85, 0xc0, 
-0x78, 0x4b, 0x8d, 0x50, 0xff, 0x41, 0x8b, 0x44, 0x87, 0x18, 0x41, 0x89, 0x57, 0x04, 
+0x4d, 0x85, 0xff, 0x74, 0x6e, 0x49, 0x63, 0x47, 0x04, 0x4c, 0x89, 0xfb, 0x85, 0xc0,
+0x78, 0x4b, 0x8d, 0x50, 0xff, 0x41, 0x8b, 0x44, 0x87, 0x18, 0x41, 0x89, 0x57, 0x04,
 0x85, 0xc0, 0x75, 0x28, 0x49, 0x8b, 0x47, 0x10, 0x41, 0x83, 0x07, 0x02, 0x48, 0x83,
 0xc0, 0x01, 0x41, 0x83, 0x7f, 0x08, 0x00, 0x49, 0x89, 0x47, 0x10, 0x75, 0x1d, 0x48,
 0xba, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f, 0x48, 0x39, 0xd0, 0x74, 0x0e,
@@ -54,8 +202,58 @@ const char bin_sr_Jne[] = {
 0x0f, 0x00, 0x00, 0xe8, 0x5f, 0xff, 0xff, 0xff
 };
 
+/*  <bin_sr_Swap>:
+    4d 85 ff                test   %r15,%r15
+    0f 84 a5 00 00 00       je     406e6e <bin_sr_Swap+0xae>
+    41 8b 47 04             mov    0x4(%r15),%eax
+    4c 89 fb                mov    %r15,%rbx
+    85 c0                   test   %eax,%eax
+    78 63                   js     406e37 <bin_sr_Swap+0x77>
+    8d 50 ff                lea    -0x1(%rax),%edx
+    48 63 c8                movslq %eax,%rcx
+    49 8d 0c 8f             lea    (%r15,%rcx,4),%rcx
+    83 fa ff                cmp    $0xffffffff,%edx
+    41 89 57 04             mov    %edx,0x4(%r15)
+    8b 79 18                mov    0x18(%rcx),%edi
+    74 4d                   je     406e37 <bin_sr_Swap+0x77>
+    8d 70 fe                lea    -0x2(%rax),%esi
+    83 fe 1e                cmp    $0x1e,%esi
+    41 89 77 04             mov    %esi,0x4(%r15)
+    44 8b 41 14             mov    0x14(%rcx),%r8d
+    7f 5c                   jg     406e56 <bin_sr_Swap+0x96>
+    83 fa 1e                cmp    $0x1e,%edx
+    41 89 57 04             mov    %edx,0x4(%r15)
+    89 79 14                mov    %edi,0x14(%rcx)
+    7f 50                   jg     406e56 <bin_sr_Swap+0x96>
+    41 89 47 04             mov    %eax,0x4(%r15)
+    44 89 41 18             mov    %r8d,0x18(%rcx)
+    49 8b 47 10             mov    0x10(%r15),%rax
+    41 8b 57 08             mov    0x8(%r15),%edx
+    41 83 07 01             addl   $0x1,(%r15)
+    48 83 c0 01             add    $0x1,%rax
+    85 d2                   test   %edx,%edx
+    49 89 47 10             mov    %rax,0x10(%r15)
+    75 29                   jne    406e4f <bin_sr_Swap+0x8f>
+    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    ff ff 7f
+    48 39 d0                cmp    %rdx,%rax
+    74 1a                   je     406e4f <bin_sr_Swap+0x8f>
+    eb 3c                   jmp    406e73 <bin_sr_Swap+0xb3>
+    bf d6 50 40 00          mov    $<str_pop>,%edi
+    e8 8c f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 2e 0f 00 00          callq  <exit_generated_code>
+    31 c0                   xor    %eax,%eax
+    e8 27 0f 00 00          callq  <exit_generated_code>
+    bf e6 50 40 00          mov    $<str_push>,%edi
+    e8 6d f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 0f 0f 00 00          callq  <exit_generated_code>
+    e8 0a ff ff ff          callq  <abort> */
 const char bin_sr_Swap[] = {
-0x4d, 0x85, 0xff, 0x0f, 0x84, 0xa5, 0x00, 0x00, 0x00, 0x41, 0x8b, 0x47, 0x04, 0x4c, 
+0x4d, 0x85, 0xff, 0x0f, 0x84, 0xa5, 0x00, 0x00, 0x00, 0x41, 0x8b, 0x47, 0x04, 0x4c,
 0x89, 0xfb, 0x85, 0xc0, 0x78, 0x63, 0x8d, 0x50, 0xff, 0x48, 0x63, 0xc8, 0x49, 0x8d,
 0x0c, 0x8f, 0x83, 0xfa, 0xff, 0x41, 0x89, 0x57, 0x04, 0x8b, 0x79, 0x18, 0x74, 0x4d,
 0x8d, 0x70, 0xfe, 0x83, 0xfe, 0x1e, 0x41, 0x89, 0x77, 0x04, 0x44, 0x8b, 0x41, 0x14,
@@ -70,6 +268,51 @@ const char bin_sr_Swap[] = {
 0xc0, 0xe8, 0x0f, 0x0f, 0x00, 0x00, 0xe8, 0x0a, 0xff, 0xff, 0xff
 };
 
+/*  <bin_sr_Dup>:
+    4d 85 ff                test   %r15,%r15
+    0f 84 94 00 00 00       je     406d9d <bin_sr_Dup+0x9d>
+    41 8b 47 04             mov    0x4(%r15),%eax
+    4c 89 fb                mov    %r15,%rbx
+    85 c0                   test   %eax,%eax
+    78 71                   js     406d85 <bin_sr_Dup+0x85>
+    8d 50 ff                lea    -0x1(%rax),%edx
+    48 63 c8                movslq %eax,%rcx
+    49 8d 0c 8f             lea    (%r15,%rcx,4),%rcx
+    83 fa 1e                cmp    $0x1e,%edx
+    41 89 57 04             mov    %edx,0x4(%r15)
+    8b 71 18                mov    0x18(%rcx),%esi
+    7f 3c                   jg     406d66 <bin_sr_Dup+0x66>
+    83 f8 1e                cmp    $0x1e,%eax
+    41 89 47 04             mov    %eax,0x4(%r15)
+    7f 33                   jg     406d66 <bin_sr_Dup+0x66>
+    83 c0 01                add    $0x1,%eax
+    41 89 47 04             mov    %eax,0x4(%r15)
+    89 71 1c                mov    %esi,0x1c(%rcx)
+    49 8b 47 10             mov    0x10(%r15),%rax
+    41 8b 57 08             mov    0x8(%r15),%edx
+    41 83 07 01             addl   $0x1,(%r15)
+    48 83 c0 01             add    $0x1,%rax
+    85 d2                   test   %edx,%edx
+    49 89 47 10             mov    %rax,0x10(%r15)
+    75 29                   jne    406d7e <bin_sr_Dup+0x7e>
+    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    ff ff 7f
+    48 39 d0                cmp    %rdx,%rax
+    74 1a                   je     406d7e <bin_sr_Dup+0x7e>
+    eb 3c                   jmp    406da2 <bin_sr_Dup+0xa2>
+    bf e6 50 40 00          mov    $<str_push>,%edi
+    e8 dd f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 3f 0f 00 00          callq  <exit_generated_code>
+    31 c0                   xor    %eax,%eax
+    e8 38 0f 00 00          callq  <exit_generated_code>
+    bf d6 50 40 00          mov    $<str_pop>,%edi
+    e8 be f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 20 0f 00 00          callq  <exit_generated_code>
+    e8 1b ff ff ff          callq  <abort> */
 const char bin_sr_Dup[] = {
 0x4d, 0x85, 0xff, 0x0f, 0x84, 0x94, 0x00, 0x00, 0x00, 0x41, 0x8b, 0x47, 0x04, 0x4c,
 0x89, 0xfb, 0x85, 0xc0, 0x78, 0x71, 0x8d, 0x50, 0xff, 0x48, 0x63, 0xc8, 0x49, 0x8d,
@@ -85,6 +328,39 @@ const char bin_sr_Dup[] = {
 0x0f, 0x00, 0x00, 0xe8, 0x1b, 0xff, 0xff, 0xff
 };
 
+/*  <bin_sr_Je>:
+    4d 85 ff                test   %r15,%r15
+    74 6e                   je     406cf3 <bin_sr_Je+0x73>
+    49 63 47 04             movslq 0x4(%r15),%rax
+    4c 89 fb                mov    %r15,%rbx
+    85 c0                   test   %eax,%eax
+    78 4b                   js     406cdb <bin_sr_Je+0x5b>
+    8d 50 ff                lea    -0x1(%rax),%edx
+    41 8b 44 87 18          mov    0x18(%r15,%rax,4),%eax
+    41 89 57 04             mov    %edx,0x4(%r15)
+    85 c0                   test   %eax,%eax
+    74 28                   je     406cc8 <bin_sr_Je+0x48>
+    49 8b 47 10             mov    0x10(%r15),%rax
+    41 83 07 02             addl   $0x2,(%r15)
+    48 83 c0 01             add    $0x1,%rax
+    41 83 7f 08 00          cmpl   $0x0,0x8(%r15)
+    49 89 47 10             mov    %rax,0x10(%r15)
+    75 1d                   jne    406cd4 <bin_sr_Je+0x54>
+    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    ff ff 7f
+    48 39 d0                cmp    %rdx,%rax
+    74 0e                   je     406cd4 <bin_sr_Je+0x54>
+    eb 30                   jmp    406cf8 <bin_sr_Je+0x78>
+    41 81 07 13 11 11 11    addl   $<imm>,(%r15)
+    49 83 47 10 01          addq   $0x1,0x10(%r15)
+    31 c0                   xor    %eax,%eax
+    e8 62 0f 00 00          callq  <exit_generated_code>
+    bf e5 50 40 00          mov    $<str_pop>,%edi
+    e8 e8 f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 4a 0f 00 00          callq  <exit_generated_code>
+    e8 5f ff ff ff          callq  <abort> */
 const char bin_sr_Je[] = {
 0x4d, 0x85, 0xff, 0x74, 0x6e, 0x49, 0x63, 0x47, 0x04, 0x4c, 0x89, 0xfb, 0x85, 0xc0,
 0x78, 0x4b, 0x8d, 0x50, 0xff, 0x41, 0x8b, 0x44, 0x87, 0x18, 0x41, 0x89, 0x57, 0x04,
@@ -97,6 +373,48 @@ const char bin_sr_Je[] = {
 0x0f, 0x00, 0x00, 0xe8, 0x5f, 0xff, 0xff, 0xff
 };
 
+/*  <bin_sr_Inc>:
+    4d 85 ff                test   %r15,%r15
+    0f 84 8b 00 00 00       je     406c74 <bin_sr_Inc+0x94>
+    41 8b 47 04             mov    0x4(%r15),%eax
+    4c 89 fb                mov    %r15,%rbx
+    85 c0                   test   %eax,%eax
+    78 68                   js     406c5c <bin_sr_Inc+0x7c>
+    48 63 d0                movslq %eax,%rdx
+    8d 48 ff                lea    -0x1(%rax),%ecx
+    49 8d 34 97             lea    (%r15,%rdx,4),%rsi
+    41 89 4f 04             mov    %ecx,0x4(%r15)
+    83 f9 1e                cmp    $0x1e,%ecx
+    8b 7e 18                mov    0x18(%rsi),%edi
+    8d 57 01                lea    0x1(%rdi),%edx
+    7f 37                   jg     406c44 <bin_sr_Inc+0x64>
+    41 89 47 04             mov    %eax,0x4(%r15)
+    89 56 18                mov    %edx,0x18(%rsi)
+    49 8b 47 10             mov    0x10(%r15),%rax
+    41 8b 57 08             mov    0x8(%r15),%edx
+    41 83 07 01             addl   $0x1,(%r15)
+    48 83 c0 01             add    $0x1,%rax
+    85 d2                   test   %edx,%edx
+    49 89 47 10             mov    %rax,0x10(%r15)
+    75 11                   jne    406c3d <bin_sr_Inc+0x5d>
+    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    ff ff 7f
+    48 39 d0                cmp    %rdx,%rax
+    74 02                   je     406c3d <bin_sr_Inc+0x5d>
+    eb 3c                   jmp    406c79 <bin_sr_Inc+0x99>
+    31 c0                   xor    %eax,%eax
+    e8 59 0f 00 00          callq  <exit_generated_code>
+    bf e6 50 40 00          mov    $<str_push>,%edi
+    e8 df f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 41 0f 00 00          callq  <exit_generated_code>
+    bf d6 50 40 00          mov    $<str_pop>,%edi
+    e8 c7 f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 29 0f 00 00          callq  <exit_generated_code>
+    e8 24 ff ff ff          callq  <abort> */
 const char bin_sr_Inc[] = {
 0x4d, 0x85, 0xff, 0x0f, 0x84, 0x8b, 0x00, 0x00, 0x00, 0x41, 0x8b, 0x47, 0x04, 0x4c,
 0x89, 0xfb, 0x85, 0xc0, 0x78, 0x68, 0x48, 0x63, 0xd0, 0x8d, 0x48, 0xff, 0x49, 0x8d,
@@ -111,6 +429,52 @@ const char bin_sr_Inc[] = {
 0x00, 0x31, 0xc0, 0xe8, 0x29, 0x0f, 0x00, 0x00, 0xe8, 0x24, 0xff, 0xff, 0xff
 };
 
+/*  <bin_sr_Add>:
+    4d 85 ff                test   %r15,%r15
+    0f 84 7f 00 00 00       je     406ba8 <bin_sr_Add+0x88>
+    41 8b 47 04             mov    0x4(%r15),%eax
+    4c 89 fb                mov    %r15,%rbx
+    85 c0                   test   %eax,%eax
+    78 55                   js     406b89 <bin_sr_Add+0x69>
+    8d 50 ff                lea    -0x1(%rax),%edx
+    48 63 c8                movslq %eax,%rcx
+    49 8d 0c 8f             lea    (%r15,%rcx,4),%rcx
+    83 fa ff                cmp    $0xffffffff,%edx
+    41 89 57 04             mov    %edx,0x4(%r15)
+    8b 71 18                mov    0x18(%rcx),%esi
+    74 3f                   je     406b89 <bin_sr_Add+0x69>
+    83 e8 02                sub    $0x2,%eax
+    41 89 47 04             mov    %eax,0x4(%r15)
+    03 71 14                add    0x14(%rcx),%esi
+    83 f8 1e                cmp    $0x1e,%eax
+    7f 54                   jg     406bad <bin_sr_Add+0x8d>
+    41 89 57 04             mov    %edx,0x4(%r15)
+    89 71 14                mov    %esi,0x14(%rcx)
+    49 8b 47 10             mov    0x10(%r15),%rax
+    41 8b 57 08             mov    0x8(%r15),%edx
+    41 83 07 01             addl   $0x1,(%r15)
+    48 83 c0 01             add    $0x1,%rax
+    85 d2                   test   %edx,%edx
+    49 89 47 10             mov    %rax,0x10(%r15)
+    75 29                   jne    406ba1 <bin_sr_Add+0x81>
+    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    ff ff 7f
+    48 39 d0                cmp    %rdx,%rax
+    74 1a                   je     406ba1 <bin_sr_Add+0x81>
+    eb 3c                   jmp    406bc5 <bin_sr_Add+0xa5>
+    bf d6 50 40 00          mov    $<str_pop>,%edi
+    e8 da f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 3c 0f 00 00          callq  <exit_generated_code>
+    31 c0                   xor    %eax,%eax
+    e8 35 0f 00 00          callq  <exit_generated_code>
+    e8 30 ff ff ff          callq  <abort>
+    bf e6 50 40 00          mov    $<str_push>,%edi
+    e8 b6 f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 18 0f 00 00          callq  <exit_generated_code> */
 const char bin_sr_Add[] = {
 0x4d, 0x85, 0xff, 0x0f, 0x84, 0x7f, 0x00, 0x00, 0x00, 0x41, 0x8b, 0x47, 0x04, 0x4c,
 0x89, 0xfb, 0x85, 0xc0, 0x78, 0x55, 0x8d, 0x50, 0xff, 0x48, 0x63, 0xc8, 0x49, 0x8d,
@@ -126,6 +490,52 @@ const char bin_sr_Add[] = {
 0x02, 0x00, 0x00, 0x00, 0x31, 0xc0, 0xe8, 0x18, 0x0f, 0x00, 0x00
 };
 
+/*  <bin_sr_Sub>:
+    4d 85 ff                test   %r15,%r15
+    0f 84 7f 00 00 00       je     406ae8 <bin_sr_Sub+0x88>
+    41 8b 47 04             mov    0x4(%r15),%eax
+    4c 89 fb                mov    %r15,%rbx
+    85 c0                   test   %eax,%eax
+    78 55                   js     406ac9 <bin_sr_Sub+0x69>
+    8d 50 ff                lea    -0x1(%rax),%edx
+    48 63 c8                movslq %eax,%rcx
+    49 8d 0c 8f             lea    (%r15,%rcx,4),%rcx
+    83 fa ff                cmp    $0xffffffff,%edx
+    41 89 57 04             mov    %edx,0x4(%r15)
+    8b 71 18                mov    0x18(%rcx),%esi
+    74 3f                   je     406ac9 <bin_sr_Sub+0x69>
+    83 e8 02                sub    $0x2,%eax
+    41 89 47 04             mov    %eax,0x4(%r15)
+    2b 71 14                sub    0x14(%rcx),%esi
+    83 f8 1e                cmp    $0x1e,%eax
+    7f 54                   jg     406aed <bin_sr_Sub+0x8d>
+    41 89 57 04             mov    %edx,0x4(%r15)
+    89 71 14                mov    %esi,0x14(%rcx)
+    49 8b 47 10             mov    0x10(%r15),%rax
+    41 8b 57 08             mov    0x8(%r15),%edx
+    41 83 07 01             addl   $0x1,(%r15)
+    48 83 c0 01             add    $0x1,%rax
+    85 d2                   test   %edx,%edx
+    49 89 47 10             mov    %rax,0x10(%r15)
+    75 29                   jne    406ae1 <bin_sr_Sub+0x81>
+    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    ff ff 7f
+    48 39 d0                cmp    %rdx,%rax
+    74 1a                   je     406ae1 <bin_sr_Sub+0x81>
+    eb 3c                   jmp    406b05 <bin_sr_Sub+0xa5>
+    bf d6 50 40 00          mov    $<str_pop>,%edi
+    e8 da f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 3c 0f 00 00          callq  <exit_generated_code>
+    31 c0                   xor    %eax,%eax
+    e8 35 0f 00 00          callq  <exit_generated_code>
+    e8 30 ff ff ff          callq  <abort>
+    bf e6 50 40 00          mov    $<str_push>,%edi
+    e8 b6 f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 18 0f 00 00          callq  <exit_generated_code> */
 const char bin_sr_Sub[] = {
 0x4d, 0x85, 0xff, 0x0f, 0x84, 0x7f, 0x00, 0x00, 0x00, 0x41, 0x8b, 0x47, 0x04, 0x4c,
 0x89, 0xfb, 0x85, 0xc0, 0x78, 0x55, 0x8d, 0x50, 0xff, 0x48, 0x63, 0xc8, 0x49, 0x8d,
@@ -141,6 +551,52 @@ const char bin_sr_Sub[] = {
 0x02, 0x00, 0x00, 0x00, 0x31, 0xc0, 0xe8, 0x18, 0x0f, 0x00, 0x00
 };
 
+/*  <bin_sr_Mul>:
+    4d 85 ff                test   %r15,%r15
+    0f 84 80 00 00 00       je     406a29 <bin_sr_Mul+0x89>
+    41 8b 47 04             mov    0x4(%r15),%eax
+    4c 89 fb                mov    %r15,%rbx
+    85 c0                   test   %eax,%eax
+    78 56                   js     406a0a <bin_sr_Mul+0x6a>
+    8d 50 ff                lea    -0x1(%rax),%edx
+    48 63 c8                movslq %eax,%rcx
+    49 8d 0c 8f             lea    (%r15,%rcx,4),%rcx
+    83 fa ff                cmp    $0xffffffff,%edx
+    41 89 57 04             mov    %edx,0x4(%r15)
+    8b 71 18                mov    0x18(%rcx),%esi
+    74 40                   je     406a0a <bin_sr_Mul+0x6a>
+    83 e8 02                sub    $0x2,%eax
+    41 89 47 04             mov    %eax,0x4(%r15)
+    0f af 71 14             imul   0x14(%rcx),%esi
+    83 f8 1e                cmp    $0x1e,%eax
+    7f 54                   jg     406a2e <bin_sr_Mul+0x8e>
+    41 89 57 04             mov    %edx,0x4(%r15)
+    89 71 14                mov    %esi,0x14(%rcx)
+    49 8b 47 10             mov    0x10(%r15),%rax
+    41 8b 57 08             mov    0x8(%r15),%edx
+    41 83 07 01             addl   $0x1,(%r15)
+    48 83 c0 01             add    $0x1,%rax
+    85 d2                   test   %edx,%edx
+    49 89 47 10             mov    %rax,0x10(%r15)
+    75 29                   jne    406a22 <bin_sr_Mul+0x82>
+    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    ff ff 7f
+    48 39 d0                cmp    %rdx,%rax
+    74 1a                   je     406a22 <bin_sr_Mul+0x82>
+    eb 3c                   jmp    406a46 <bin_sr_Mul+0xa6>
+    bf d6 50 40 00          mov    $<str_pop>,%edi
+    e8 d9 f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 3b 0f 00 00          callq  <exit_generated_code>
+    31 c0                   xor    %eax,%eax
+    e8 34 0f 00 00          callq  <exit_generated_code>
+    e8 2f ff ff ff          callq  <abort>
+    bf e6 50 40 00          mov    $<str_push>,%edi
+    e8 b5 f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 17 0f 00 00          callq  <exit_generated_code> */
 const char bin_sr_Mul[] = {
 0x4d, 0x85, 0xff, 0x0f, 0x84, 0x80, 0x00, 0x00, 0x00, 0x41, 0x8b, 0x47, 0x04, 0x4c,
 0x89, 0xfb, 0x85, 0xc0, 0x78, 0x56, 0x8d, 0x50, 0xff, 0x48, 0x63, 0xc8, 0x49, 0x8d,
@@ -156,6 +612,38 @@ const char bin_sr_Mul[] = {
 0x08, 0x02, 0x00, 0x00, 0x00, 0x31, 0xc0, 0xe8, 0x17, 0x0f, 0x00, 0x00
 };
 
+/*  <bin_sr_Rand>:
+    e8 8a f4 ff ff          callq  <rand>
+    4d 85 ff                test   %r15,%r15
+    74 63                   je     40698d <bin_sr_Rand+0x6d>
+    41 8b 57 04             mov    0x4(%r15),%edx
+    4c 89 fb                mov    %r15,%rbx
+    83 fa 1e                cmp    $0x1e,%edx
+    7f 3f                   jg     406975 <bin_sr_Rand+0x55>
+    83 c2 01                add    $0x1,%edx
+    41 89 57 04             mov    %edx,0x4(%r15)
+    48 63 d2                movslq %edx,%rdx
+    41 89 44 97 18          mov    %eax,0x18(%r15,%rdx,4)
+    49 8b 47 10             mov    0x10(%r15),%rax
+    41 8b 57 08             mov    0x8(%r15),%edx
+    41 83 07 01             addl   $0x1,(%r15)
+    48 83 c0 01             add    $0x1,%rax
+    85 d2                   test   %edx,%edx
+    49 89 47 10             mov    %rax,0x10(%r15)
+    75 11                   jne    40696e <bin_sr_Rand+0x4e>
+    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    ff ff 7f
+    48 39 d0                cmp    %rdx,%rax
+    74 02                   je     40696e <bin_sr_Rand+0x4e>
+    eb 24                   jmp    406992 <bin_sr_Rand+0x72>
+    31 c0                   xor    %eax,%eax
+    e8 68 0f 00 00          callq  <exit_generated_code>
+    bf e6 50 40 00          mov    $<str_push>,%edi
+    e8 ee f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 50 0f 00 00          callq  <exit_generated_code>
+    e8 65 ff ff ff          callq  <abort> */
 const char bin_sr_Rand[] = {
 0xe8, 0x8a, 0xf4, 0xff, 0xff, 0x4d, 0x85, 0xff, 0x74, 0x63, 0x41, 0x8b, 0x57, 0x04,
 0x4c, 0x89, 0xfb, 0x83, 0xfa, 0x1e, 0x7f, 0x3f, 0x83, 0xc2, 0x01, 0x41, 0x89, 0x57,
@@ -168,6 +656,48 @@ const char bin_sr_Rand[] = {
 0xff, 0xff
 };
 
+/*  <bin_sr_Dec>:
+    4d 85 ff                test   %r15,%r15
+    0f 84 8b 00 00 00       je     406914 <bin_sr_Dec+0x94>
+    41 8b 47 04             mov    0x4(%r15),%eax
+    4c 89 fb                mov    %r15,%rbx
+    85 c0                   test   %eax,%eax
+    78 68                   js     4068fc <bin_sr_Dec+0x7c>
+    48 63 d0                movslq %eax,%rdx
+    8d 48 ff                lea    -0x1(%rax),%ecx
+    49 8d 34 97             lea    (%r15,%rdx,4),%rsi
+    41 89 4f 04             mov    %ecx,0x4(%r15)
+    83 f9 1e                cmp    $0x1e,%ecx
+    8b 7e 18                mov    0x18(%rsi),%edi
+    8d 57 ff                lea    -0x1(%rdi),%edx
+    7f 37                   jg     4068e4 <bin_sr_Dec+0x64>
+    41 89 47 04             mov    %eax,0x4(%r15)
+    89 56 18                mov    %edx,0x18(%rsi)
+    49 8b 47 10             mov    0x10(%r15),%rax
+    41 8b 57 08             mov    0x8(%r15),%edx
+    41 83 07 01             addl   $0x1,(%r15)
+    48 83 c0 01             add    $0x1,%rax
+    85 d2                   test   %edx,%edx
+    49 89 47 10             mov    %rax,0x10(%r15)
+    75 11                   jne    4068dd <bin_sr_Dec+0x5d>
+    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    ff ff 7f
+    48 39 d0                cmp    %rdx,%rax
+    74 02                   je     4068dd <bin_sr_Dec+0x5d>
+    eb 3c                   jmp    406919 <bin_sr_Dec+0x99>
+    31 c0                   xor    %eax,%eax
+    e8 59 0f 00 00          callq  <exit_generated_code>
+    bf e6 50 40 00          mov    $<str_push>,%edi
+    e8 9f f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 41 0f 00 00          callq  <exit_generated_code>
+    bf d6 50 40 00          mov    $<str_pop>,%edi
+    e8 87 f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 29 0f 00 00          callq  <exit_generated_code>
+    e8 24 ff ff ff          callq  <abort> */
 const char bin_sr_Dec[] = {
 0x4d, 0x85, 0xff, 0x0f, 0x84, 0x8b, 0x00, 0x00, 0x00, 0x41, 0x8b, 0x47, 0x04, 0x4c,
 0x89, 0xfb, 0x85, 0xc0, 0x78, 0x68, 0x48, 0x63, 0xd0, 0x8d, 0x48, 0xff, 0x49, 0x8d,
@@ -182,6 +712,35 @@ const char bin_sr_Dec[] = {
 0x00, 0x31, 0xc0, 0xe8, 0x29, 0x0f, 0x00, 0x00, 0xe8, 0x24, 0xff, 0xff, 0xff
 };
 
+/*  <bin_sr_Drop>:
+    4d 85 ff                test   %r15,%r15
+    74 5a                   je     <bin_sr_Drop+0x5f>
+    41 8b 47 04             mov    0x4(%r15),%eax
+    4c 89 fb                mov    %r15,%rbx
+    85 c0                   test   %eax,%eax
+    78 37                   js     <bin_sr_Drop+0x47>
+    83 e8 01                sub    $0x1,%eax
+    41 8b 57 08             mov    0x8(%r15),%edx
+    41 83 07 01             addl   $0x1,(%r15)
+    41 89 47 04             mov    %eax,0x4(%r15)
+    49 8b 47 10             mov    0x10(%r15),%rax
+    48 83 c0 01             add    $0x1,%rax
+    85 d2                   test   %edx,%edx
+    49 89 47 10             mov    %rax,0x10(%r15)
+    75 11                   jne    <bin_sr_Drop+0x40>
+    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    ff ff 7f
+    48 39 d0                cmp    %rdx,%rax
+    74 02                   je     <bin_sr_Drop+0x40>
+    31 c0                   xor    %eax,%eax
+    eb 22                   jmp    <bin_sr_Drop+0x64>
+    e8 76 0f 00 00          callq  <exit_generated_code>
+    bf d6 50 40 00          mov    $<str_pop>,%edi
+    e8 fc f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 5e 0f 00 00          callq  <exit_generated_code>
+    e8 59 ff ff ff          callq  <abort> */
 const char bin_sr_Drop[] = {
 0x4d, 0x85, 0xff, 0x74, 0x5a, 0x41, 0x8b, 0x47, 0x04, 0x4c, 0x89, 0xfb, 0x85, 0xc0,
 0x78, 0x37, 0x83, 0xe8, 0x01, 0x41, 0x8b, 0x57, 0x08, 0x41, 0x83, 0x07, 0x01, 0x41,
@@ -193,6 +752,52 @@ const char bin_sr_Drop[] = {
 0xff, 0xff
 };
 
+/*  <bin_sr_Over>:
+    4d 85 ff                test   %r15,%r15
+    0f 84 94 00 00 00       je     <bin_sr_Over+0x9d>
+    41 8b 47 04             mov    0x4(%r15),%eax
+    4c 89 fb                mov    %r15,%rbx
+    85 c0                   test   %eax,%eax
+    78 6a                   js     <bin_sr_Over+0x7e>
+    8d 50 ff                lea    -0x1(%rax),%edx
+    48 63 c8                movslq %eax,%rcx
+    49 8d 0c 8f             lea    (%r15,%rcx,4),%rcx
+    83 fa ff                cmp    $0xffffffff,%edx
+    41 89 57 04             mov    %edx,0x4(%r15)
+    8b 69 18                mov    0x18(%rcx),%ebp
+    74 54                   je     <bin_sr_Over+0x7e>
+    83 e8 02                sub    $0x2,%eax
+    4c 89 ff                mov    %r15,%rdi
+    41 89 47 04             mov    %eax,0x4(%r15)
+    44 8b 61 14             mov    0x14(%rcx),%r12d
+    44 89 e6                mov    %r12d,%esi
+    e8 9c 0f 00 00          callq  <push>
+    89 ee                   mov    %ebp,%esi
+    4c 89 ff                mov    %r15,%rdi
+    e8 92 0f 00 00          callq  <push>
+    44 89 e6                mov    %r12d,%esi
+    4c 89 ff                mov    %r15,%rdi
+    e8 87 0f 00 00          callq  <push>
+    49 8b 77 10             mov    0x10(%r15),%rsi
+    41 8b 47 08             mov    0x8(%r15),%eax
+    41 83 07 01             addl   $0x1,(%r15)
+    48 8d 56 01             lea    0x1(%rsi),%rdx
+    85 c0                   test   %eax,%eax
+    49 89 57 10             mov    %rdx,0x10(%r15)
+    75 29                   jne    <bin_sr_Over+0x96>
+    48 b8 ff ff ff ff ff    movabs $0x7fffffffffffffff,%rax
+    ff ff 7f
+    48 39 c2                cmp    %rax,%rdx
+    74 1a                   je     <bin_sr_Over+0x96>
+    eb 24                   jmp    <bin_sr_Over+0xa2>
+    bf e5 50 40 00          mov    $<str_pop>,%edi
+    e8 7f f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 21 0f 00 00          callq  <exit_generated_code>
+    31 c0                   xor    %eax,%eax
+    e8 1a 0f 00 00          callq  <exit_generated_code>
+    e8 15 ff ff ff          callq  <abort> */
 const char bin_sr_Over[] = {
 0x4d, 0x85, 0xff, 0x0f, 0x84, 0x94, 0x00, 0x00, 0x00, 0x41, 0x8b, 0x47, 0x04, 0x4c,
 0x89, 0xfb, 0x85, 0xc0, 0x78, 0x6a, 0x8d, 0x50, 0xff, 0x48, 0x63, 0xc8, 0x49, 0x8d,
@@ -208,6 +813,54 @@ const char bin_sr_Over[] = {
 0x0f, 0x00, 0x00, 0xe8, 0x15, 0xff, 0xff, 0xff
 };
 
+/*  <bin_sr_Mod>:
+    4d 85 ff                test   %r15,%r15
+    0f 84 9b 00 00 00       je     406724 <bin_sr_Mod+0xa4>
+    41 8b 4f 04             mov    0x4(%r15),%ecx
+    4c 89 fb                mov    %r15,%rbx
+    85 c9                   test   %ecx,%ecx
+    78 78                   js     40670c <bin_sr_Mod+0x8c>
+    8d 71 ff                lea    -0x1(%rcx),%esi
+    48 63 c1                movslq %ecx,%rax
+    49 8d 3c 87             lea    (%r15,%rax,4),%rdi
+    83 fe ff                cmp    $0xffffffff,%esi
+    41 89 77 04             mov    %esi,0x4(%r15)
+    8b 47 18                mov    0x18(%rdi),%eax
+    74 62                   je     40670c <bin_sr_Mod+0x8c>
+    83 e9 02                sub    $0x2,%ecx
+    41 89 4f 04             mov    %ecx,0x4(%r15)
+    44 8b 47 14             mov    0x14(%rdi),%r8d
+    45 85 c0                test   %r8d,%r8d
+    74 44                   je     4066fe <bin_sr_Mod+0x7e>
+    31 d2                   xor    %edx,%edx
+    41 f7 f0                div    %r8d
+    83 f9 1e                cmp    $0x1e,%ecx
+    7f 30                   jg     4066f4 <bin_sr_Mod+0x74>
+    41 89 77 04             mov    %esi,0x4(%r15)
+    89 57 14                mov    %edx,0x14(%rdi)
+    49 8b 47 10             mov    0x10(%r15),%rax
+    41 8b 57 08             mov    0x8(%r15),%edx
+    41 83 07 01             addl   $0x1,(%r15)
+    48 83 c0 01             add    $0x1,%rax
+    85 d2                   test   %edx,%edx
+    49 89 47 10             mov    %rax,0x10(%r15)
+    75 22                   jne    406705 <bin_sr_Mod+0x85>
+    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    ff ff 7f
+    48 39 d0                cmp    %rdx,%rax
+    74 13                   je     406705 <bin_sr_Mod+0x85>
+    eb 35                   jmp    406729 <bin_sr_Mod+0xa9>
+    bf e6 50 40 00          mov    $<str_push>,%edi
+    e8 cf f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 31 0f 00 00          callq  <exit_generated_code>
+    bf d6 50 40 00          mov    $<str_pop>,%edi
+    e8 b7 f3 ff ff          callq  <puts>
+    c7 43 08 02 00 00 00    movl   $0x2,0x8(%rbx)
+    31 c0                   xor    %eax,%eax
+    e8 19 0f 00 00          callq  <exit_generated_code>
+    e8 14 ff ff ff          callq  <abort> */
 const char bin_sr_Mod[] = {
 0x4d, 0x85, 0xff, 0x0f, 0x84, 0x9b, 0x00, 0x00, 0x00, 0x41, 0x8b, 0x4f, 0x04, 0x4c,
 0x89, 0xfb, 0x85, 0xc9, 0x78, 0x78, 0x8d, 0x71, 0xff, 0x48, 0x63, 0xc1, 0x49, 0x8d,
@@ -224,7 +877,13 @@ const char bin_sr_Mod[] = {
 0xff
 };
 
+/*  41 81 07 00 00 00 00    addl   $0x0,(%r15)
+    49 83 47 10 01          addq   $0x1,0x10(%r15)
+    31 c0                   xor    %eax,%eax
+    e8 00 00 00 00          callq  <exit_generated_code> */
 const char bin_sr_Jump[] = {
 0x41, 0x81, 0x07, 0x00, 0x00, 0x00, 0x00, 0x49, 0x83, 0x47, 0x10, 0x01, 0x31, 0xc0,
 0xe8, 0x00, 0x00, 0x00, 0x00
 };
+
+#endif /* TRANSLATED_INLINE_H_ */

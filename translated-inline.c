@@ -1,6 +1,6 @@
-/*  inline_translated.c - a inline binary translation sample engine
+/*  translated-inline.c - a inline binary translation sample engine
     for a stack virtual machine.
-    Copyright (c) 2015, 2016 Grigory Rechistov. All rights reserved.
+    Copyright (c) 2015, 2016 Valery Konychev. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -46,6 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 #include <math.h>
 
 #include "common.h"
+/* Capsules and diassemble */
 #include "inline_data.h"
 
 /* setjmp/longjmp context buffer to be reachable from within generated code */
@@ -64,6 +65,15 @@ char gen_code[JIT_CODE_SIZE] __attribute__ ((section (".text#")))
 
 /* TODO:a global - not good. Should be moved into cpu state or somewhere else */
 static long long steplimit = LLONG_MAX;
+
+/* Strings for capsules. It's used for substitution address. Before call
+   printf or puts fuction address have been placed in edi register. */
+/* For printf("[%d]\n", tmp1); in sr_Print capsule. */
+const char str_printf[] = "[%d]\n";
+/* For printf("Stack underflow\n"); in pop function. */
+const char str_pop[] = "Stack underflow\n";
+/* For printf("Stack overflow\n"); in push function. */
+const char str_push[] = "Stack overflow\n";
 
 static inline decode_t decode_at_address(const Instr_t* prog, uint32_t addr) {
     assert(addr < PROGRAM_SIZE);
@@ -150,6 +160,13 @@ static void inline_translate_program(const Instr_t *prog,
         decode_t decoded = decode_at_address(prog, i);
         entrypoints[i] = (void*) cur;
 
+        /* Address of function relative of the end of call.
+           Exaple:  addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
+                                - (intptr_t)call_addr_in_capsule;
+           cur - address of start curent binary capsules in translated code.
+           call_addr_in_capsule - address of call function in binary capsule. Look in the inline_data.h
+           Need to copy relative address in (cur + call_addr_in_capsule + 1),
+           because first byte is opcode of call instruction */
         int addr_exit1 = 0;
         int addr_exit2 = 0;
         int addr_exit3 = 0;
@@ -161,10 +178,15 @@ static void inline_translate_program(const Instr_t *prog,
         int addr_abort = 0;
         int addr_printf = 0;
         int addr_rand = 0;
+        /* Absolute address of strings. To printf or puts function work need to move absolute address in
+           edi register. */
         int addr_str1 = (intptr_t)&str_printf;
         int addr_str2 = (intptr_t)&str_pop;
         int addr_str3 = (intptr_t)&str_push;
+        /* Length of current binary capsule. */
         int len = 0;
+        /* For instruction with immediate. If it's branch instruction in imm need to place immediate + 2,
+           2 is a length of inctruction. */
         int imm = 0;
 
         switch(decoded.opcode) {
