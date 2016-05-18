@@ -9,7 +9,7 @@ COMMON_SRC = common.c
 COMMON_OBJ := $(COMMON_SRC:.c=.o)
 COMMON_HEADERS = common.h
 
-ALL = switched threaded predecoded subroutined threaded-cached tailrecursive translated native
+ALL = switched threaded predecoded subroutined threaded-cached tailrecursive translated translated-inline native
 # Must be the first target for the magic below to work
 all: $(ALL)
 
@@ -26,7 +26,7 @@ COMPILE.c = $(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c
 POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d
 
 %.o: %.c $(DEPDIR)/%.d
-	$(COMPILE.c) $(OUTPUT_OPTION) $< 
+	$(COMPILE.c) $(OUTPUT_OPTION) $<
 	$(POSTCOMPILE)
 
 $(DEPDIR)/%.d: ;
@@ -57,6 +57,9 @@ subroutined: subroutined.o
 
 translated: CFLAGS += -std=gnu11
 translated: translated.o
+
+translated-inline: CFLAGS += -std=gnu11
+translated-inline: translated-inline.o
 
 native: native.o
 
