@@ -196,7 +196,8 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Nop);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Nop, len);
-            memcpy(cur+0x2c,&addr_exit1, 4);
+            memcpy(cur+0x2c, &addr_exit1, 4);
+            memcpy(cur+0x1a, &steplimit, 8);
             break;
         case Instr_Halt:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -217,13 +218,14 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Print);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Print, len);
-            memcpy(cur+0x58,&addr_exit1, 4);
-            memcpy(cur+0x70,&addr_exit2,4);
-            memcpy(cur+0x25,&addr_printf,4);
-            memcpy(cur+0x62,&addr_puts1,4);
-            memcpy(cur+0x75,&addr_abort,4);
-            memcpy(cur+0x1a,&addr_str1,4);
-            memcpy(cur+0x5d,&addr_str2,4);
+            memcpy(cur+0x58, &addr_exit1, 4);
+            memcpy(cur+0x70, &addr_exit2, 4);
+            memcpy(cur+0x25, &addr_printf, 4);
+            memcpy(cur+0x62, &addr_puts1, 4);
+            memcpy(cur+0x75, &addr_abort, 4);
+            memcpy(cur+0x1a, &addr_str1, 4);
+            memcpy(cur+0x5d, &addr_str2, 4);
+            memcpy(cur+0x43, &steplimit, 8);
             break;
         case Instr_Swap:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -238,14 +240,15 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Swap);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Swap, len);
-            memcpy(cur+0x7d,&addr_puts1,4);
-            memcpy(cur+0x9c,&addr_puts2,4);
-            memcpy(cur+0xaf,&addr_abort,4);
-            memcpy(cur+0x8b,&addr_exit1,4);
-            memcpy(cur+0x92,&addr_exit2,4);
-            memcpy(cur+0xaa,&addr_exit3,4);
-            memcpy(cur+0x78,&addr_str2,4);
-            memcpy(cur+0x97,&addr_str3,4);
+            memcpy(cur+0x7d, &addr_puts1, 4);
+            memcpy(cur+0x9c, &addr_puts2, 4);
+            memcpy(cur+0xaf, &addr_abort, 4);
+            memcpy(cur+0x8b, &addr_exit1, 4);
+            memcpy(cur+0x92, &addr_exit2, 4);
+            memcpy(cur+0xaa, &addr_exit3, 4);
+            memcpy(cur+0x78, &addr_str2, 4);
+            memcpy(cur+0x97, &addr_str3, 4);
+            memcpy(cur+0x68, &steplimit, 8);
             break;
         case Instr_Dup:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -260,14 +263,15 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Dup);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Dup, len);
-            memcpy(cur+0x7a,&addr_exit1, 4);
-            memcpy(cur+0x81,&addr_exit2,4);
-            memcpy(cur+0x99,&addr_exit3,4);
-            memcpy(cur+0x6c,&addr_puts1,4);
-            memcpy(cur+0x8b,&addr_puts2,4);
-            memcpy(cur+0x9e,&addr_abort,4);
-            memcpy(cur+0x86,&addr_str2,4);
-            memcpy(cur+0x67,&addr_str3,4);
+            memcpy(cur+0x7a, &addr_exit1, 4);
+            memcpy(cur+0x81, &addr_exit2, 4);
+            memcpy(cur+0x99, &addr_exit3, 4);
+            memcpy(cur+0x6c, &addr_puts1, 4);
+            memcpy(cur+0x8b, &addr_puts2, 4);
+            memcpy(cur+0x9e, &addr_abort, 4);
+            memcpy(cur+0x86, &addr_str2, 4);
+            memcpy(cur+0x67, &addr_str3, 4);
+            memcpy(cur+0x57, &steplimit, 8);
             break;
         case Instr_Inc:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -282,14 +286,15 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Inc);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Inc, len);
-            memcpy(cur+0x60,&addr_exit1, 4);
-            memcpy(cur+0x78,&addr_exit2,4);
-            memcpy(cur+0x90,&addr_exit3,4);
-            memcpy(cur+0x6a,&addr_puts1,4);
-            memcpy(cur+0x82,&addr_puts2,4);
-            memcpy(cur+0x95,&addr_abort,4);
-            memcpy(cur+0x7d,&addr_str2,4);
-            memcpy(cur+0x65,&addr_str3,4);
+            memcpy(cur+0x60, &addr_exit1, 4);
+            memcpy(cur+0x78, &addr_exit2, 4);
+            memcpy(cur+0x90, &addr_exit3, 4);
+            memcpy(cur+0x6a, &addr_puts1, 4);
+            memcpy(cur+0x82, &addr_puts2, 4);
+            memcpy(cur+0x95, &addr_abort, 4);
+            memcpy(cur+0x7d, &addr_str2, 4);
+            memcpy(cur+0x65, &addr_str3, 4);
+            memcpy(cur+0x4e, &steplimit, 8);
             break;
         case Instr_Add:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -304,14 +309,15 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Add);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Add, len);
-            memcpy(cur+0x7d,&addr_exit1, 4);
-            memcpy(cur+0x84,&addr_exit2,4);
-            memcpy(cur+0xa1,&addr_exit3,4);
-            memcpy(cur+0x6f,&addr_puts1,4);
-            memcpy(cur+0x93,&addr_puts2,4);
-            memcpy(cur+0x89,&addr_abort,4);
-            memcpy(cur+0x6a,&addr_str2,4);
-            memcpy(cur+0x8e,&addr_str3,4);
+            memcpy(cur+0x7d, &addr_exit1, 4);
+            memcpy(cur+0x84, &addr_exit2, 4);
+            memcpy(cur+0xa1, &addr_exit3, 4);
+            memcpy(cur+0x6f, &addr_puts1, 4);
+            memcpy(cur+0x93, &addr_puts2, 4);
+            memcpy(cur+0x89, &addr_abort, 4);
+            memcpy(cur+0x6a, &addr_str2, 4);
+            memcpy(cur+0x8e, &addr_str3, 4);
+            memcpy(cur+0x5a, &steplimit, 8);
             break;
         case Instr_Sub:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -326,14 +332,15 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Sub);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Sub, len);
-            memcpy(cur+0x7d,&addr_exit1, 4);
-            memcpy(cur+0x84,&addr_exit2,4);
-            memcpy(cur+0xa1,&addr_exit3,4);
-            memcpy(cur+0x6f,&addr_puts1,4);
-            memcpy(cur+0x93,&addr_puts2,4);
-            memcpy(cur+0x89,&addr_abort,4);
-            memcpy(cur+0x6a,&addr_str2,4);
-            memcpy(cur+0x8e,&addr_str3,4);
+            memcpy(cur+0x7d, &addr_exit1, 4);
+            memcpy(cur+0x84, &addr_exit2, 4);
+            memcpy(cur+0xa1, &addr_exit3, 4);
+            memcpy(cur+0x6f, &addr_puts1, 4);
+            memcpy(cur+0x93, &addr_puts2, 4);
+            memcpy(cur+0x89, &addr_abort, 4);
+            memcpy(cur+0x6a, &addr_str2, 4);
+            memcpy(cur+0x8e, &addr_str3, 4);
+            memcpy(cur+0x5a, &steplimit, 8);
             break;
         case Instr_Mul:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -348,14 +355,15 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Mul);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Mul, len);
-            memcpy(cur+0x7e,&addr_exit1, 4);
-            memcpy(cur+0x85,&addr_exit2,4);
-            memcpy(cur+0xa2,&addr_exit3,4);
-            memcpy(cur+0x70,&addr_puts1,4);
-            memcpy(cur+0x94,&addr_puts2,4);
-            memcpy(cur+0x8a,&addr_abort,4);
-            memcpy(cur+0x6b,&addr_str2,4);
-            memcpy(cur+0x8f,&addr_str3,4);
+            memcpy(cur+0x7e, &addr_exit1, 4);
+            memcpy(cur+0x85, &addr_exit2, 4);
+            memcpy(cur+0xa2, &addr_exit3, 4);
+            memcpy(cur+0x70, &addr_puts1, 4);
+            memcpy(cur+0x94, &addr_puts2, 4);
+            memcpy(cur+0x8a, &addr_abort, 4);
+            memcpy(cur+0x6b, &addr_str2, 4);
+            memcpy(cur+0x8f, &addr_str3, 4);
+            memcpy(cur+0x5b, &steplimit, 8);
             break;
         case Instr_Rand:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -368,12 +376,13 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Rand);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Rand, len);
-            memcpy(cur+0x51,&addr_exit1, 4);
-            memcpy(cur+0x69,&addr_exit2,4);
-            memcpy(cur+0x5b,&addr_puts1,4);
-            memcpy(cur+0x6e,&addr_abort,4);
-            memcpy(cur+0x56,&addr_str3,4);
-            memcpy(cur+0x01,&addr_rand,4);
+            memcpy(cur+0x51, &addr_exit1, 4);
+            memcpy(cur+0x69, &addr_exit2, 4);
+            memcpy(cur+0x5b, &addr_puts1, 4);
+            memcpy(cur+0x6e, &addr_abort, 4);
+            memcpy(cur+0x56, &addr_str3, 4);
+            memcpy(cur+0x01, &addr_rand, 4);
+            memcpy(cur+0x3f, &steplimit, 8);
             break;
         case Instr_Dec:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -388,14 +397,15 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Dec);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Dec, len);
-            memcpy(cur+0x60,&addr_exit1, 4);
-            memcpy(cur+0x78,&addr_exit2,4);
-            memcpy(cur+0x90,&addr_exit3,4);
-            memcpy(cur+0x6a,&addr_puts1,4);
-            memcpy(cur+0x82,&addr_puts2,4);
-            memcpy(cur+0x95,&addr_abort,4);
-            memcpy(cur+0x7d,&addr_str2,4);
-            memcpy(cur+0x65,&addr_str3,4);
+            memcpy(cur+0x60, &addr_exit1, 4);
+            memcpy(cur+0x78, &addr_exit2, 4);
+            memcpy(cur+0x90, &addr_exit3, 4);
+            memcpy(cur+0x6a, &addr_puts1, 4);
+            memcpy(cur+0x82, &addr_puts2, 4);
+            memcpy(cur+0x95, &addr_abort, 4);
+            memcpy(cur+0x7d, &addr_str2, 4);
+            memcpy(cur+0x65, &addr_str3, 4);
+            memcpy(cur+0x4e, &steplimit, 8);
             break;
         case Instr_Drop:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -407,11 +417,12 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Drop);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Drop, len);
-            memcpy(cur+0x43,&addr_exit1, 4);
-            memcpy(cur+0x5b,&addr_exit2,4);
-            memcpy(cur+0x4d,&addr_puts1,4);
-            memcpy(cur+0x60,&addr_abort,4);
-            memcpy(cur+0x48,&addr_str2,4);
+            memcpy(cur+0x43, &addr_exit1, 4);
+            memcpy(cur+0x5b, &addr_exit2, 4);
+            memcpy(cur+0x4d, &addr_puts1, 4);
+            memcpy(cur+0x60, &addr_abort, 4);
+            memcpy(cur+0x48, &addr_str2, 4);
+            memcpy(cur+0x31, &steplimit, 8);
             break;
         case Instr_Over:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -426,14 +437,15 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Over);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Over, len);
-            memcpy(cur+0x3c,&addr_push1, 4);
-            memcpy(cur+0x46,&addr_push2,4);
-            memcpy(cur+0x51,&addr_push3,4);
-            memcpy(cur+0x84,&addr_puts1,4);
-            memcpy(cur+0x9e,&addr_abort,4);
-            memcpy(cur+0x92,&addr_exit1,4);
-            memcpy(cur+0x99,&addr_exit2,4);
-            memcpy(cur+0x7f,&addr_str2,4);
+            memcpy(cur+0x3c, &addr_push1, 4);
+            memcpy(cur+0x46, &addr_push2, 4);
+            memcpy(cur+0x51, &addr_push3, 4);
+            memcpy(cur+0x84, &addr_puts1, 4);
+            memcpy(cur+0x9e, &addr_abort, 4);
+            memcpy(cur+0x92, &addr_exit1, 4);
+            memcpy(cur+0x99, &addr_exit2, 4);
+            memcpy(cur+0x7f, &addr_str2, 4);
+            memcpy(cur+0x6f, &steplimit, 8);
             break;
         case Instr_Mod:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -446,13 +458,14 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Mod);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Mod, len);
-            memcpy(cur+0x88,&addr_exit1, 4);
-            memcpy(cur+0xa0,&addr_exit2,4);
-            memcpy(cur+0x7a,&addr_puts1,4);
-            memcpy(cur+0x92,&addr_puts2,4);
-            memcpy(cur+0xa5,&addr_abort,4);
-            memcpy(cur+0x8d,&addr_str2,4);
-            memcpy(cur+0x75,&addr_str3,4);
+            memcpy(cur+0x88, &addr_exit1, 4);
+            memcpy(cur+0xa0, &addr_exit2, 4);
+            memcpy(cur+0x7a, &addr_puts1, 4);
+            memcpy(cur+0x92, &addr_puts2, 4);
+            memcpy(cur+0xa5, &addr_abort, 4);
+            memcpy(cur+0x8d, &addr_str2, 4);
+            memcpy(cur+0x75, &addr_str3, 4);
+            memcpy(cur+0x65, &steplimit, 8);
             break;
         case Instr_Push:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -465,12 +478,13 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Push);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Push, len);
-            memcpy(cur+0x4f,&addr_exit1, 4);
-            memcpy(cur+0x67,&addr_exit2,4);
-            memcpy(cur+0x59,&addr_puts1,4);
-            memcpy(cur+0x6c,&addr_abort,4);
-            memcpy(cur+0x54,&addr_str3,4);
-            memcpy(cur+0x23,&imm,4);
+            memcpy(cur+0x4f, &addr_exit1, 4);
+            memcpy(cur+0x67, &addr_exit2, 4);
+            memcpy(cur+0x59, &addr_puts1, 4);
+            memcpy(cur+0x6c, &addr_abort, 4);
+            memcpy(cur+0x54, &addr_str3, 4);
+            memcpy(cur+0x23, &imm, 4);
+            memcpy(cur+0x3d, &steplimit, 8);
             break;
         case Instr_JNE:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -483,12 +497,13 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Jne);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Jne, len);
-            memcpy(cur+0x57,&addr_exit1, 4);
-            memcpy(cur+0x6f,&addr_exit2,4);
-            memcpy(cur+0x61,&addr_puts1,4);
-            memcpy(cur+0x74,&addr_abort,4);
-            memcpy(cur+0x5c,&addr_str2,4);
-            memcpy(cur+0x4b,&imm,4);
+            memcpy(cur+0x57, &addr_exit1, 4);
+            memcpy(cur+0x6f, &addr_exit2, 4);
+            memcpy(cur+0x61, &addr_puts1, 4);
+            memcpy(cur+0x74, &addr_abort, 4);
+            memcpy(cur+0x5c, &addr_str2, 4);
+            memcpy(cur+0x4b, &imm, 4);
+            memcpy(cur+0x39, &steplimit, 8);
             break;
         case Instr_JE:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
@@ -501,22 +516,23 @@ static void inline_translate_program(const Instr_t *prog,
             len = sizeof(bin_sr_Je);
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Je, len);
-            memcpy(cur+0x57,&addr_exit1, 4);
-            memcpy(cur+0x6f,&addr_exit2,4);
-            memcpy(cur+0x61,&addr_puts1,4);
-            memcpy(cur+0x74,&addr_abort,4);
-            memcpy(cur+0x5c,&addr_str2,4);
-            memcpy(cur+0x4b,&imm,4);
+            memcpy(cur+0x57, &addr_exit1, 4);
+            memcpy(cur+0x6f, &addr_exit2, 4);
+            memcpy(cur+0x61, &addr_puts1, 4);
+            memcpy(cur+0x74, &addr_abort, 4);
+            memcpy(cur+0x5c, &addr_str2, 4);
+            memcpy(cur+0x4b, &imm, 4);
+            memcpy(cur+0x39, &steplimit, 8);
             break;
         case Instr_Jump:
             addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
                                 - (intptr_t)0x0e;
             len = sizeof(bin_sr_Jump);
+            imm = decoded.immediate + 2;
             assert(cur + len - out_code < JIT_CODE_SIZE);
             memcpy(cur, bin_sr_Jump, len);
-            memcpy(cur+0x0f,&addr_exit1, 4);
-            imm = decoded.immediate + 2;
-            memcpy(cur+0x03,&imm, 4);
+            memcpy(cur+0x0f, &addr_exit1, 4);
+            memcpy(cur+0x03, &imm, 4);
             break;
         case Instr_Break:
         default:

@@ -14,6 +14,7 @@ $<imm>          - in that place should to copy immediate. If it's Branch capsule
 $<str_pop>      - in that place should to copy absolute address of str_pop
 $<str_push>     - in that place should to copy absolute address of str_push
 $<str_printf>   - in that place should to copy absolute address of str_printf
+$<steplimit>    - in that place should to copy steplimit
 <rand>          - in that place should to copy relative address of rand function
 <push>          - in that place should to copy relative address of push function
 <puts>          - in that place should to copy relative address of puts function
@@ -41,7 +42,7 @@ const char bin_sr_Break[] = {
     85 c0                   test   %eax,%eax
     49 89 57 10             mov    %rdx,0x10(%r15)
     75 11                   jne    407049 <bin_sr_Nop+0x29>
-    48 b8 ff ff ff ff ff    movabs $0x7fffffffffffffff,%rax
+    48 b8 ff ff ff ff ff    movabs $<steplimit>,%rax
     ff ff 7f
     48 39 c2                cmp    %rax,%rdx
     74 02                   je     407049 <bin_sr_Nop+0x29>
@@ -85,7 +86,7 @@ const char bin_sr_Halt[] = {
     85 d2                   test   %edx,%edx
     49 89 47 10             mov    %rax,0x10(%r15)
     75 11                   jne    406fcc <bin_sr_Push+0x4c>
-    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    48 ba ff ff ff ff ff    movabs $<steplimit>,%rdx
     ff ff 7f
     48 39 d0                cmp    %rdx,%rax
     74 02                   je     406fcc <bin_sr_Push+0x4c>
@@ -130,7 +131,7 @@ const char bin_sr_Push[] = {
     85 c0                   test   %eax,%eax
     49 89 57 10             mov    %rdx,0x10(%r15)
     75 14                   jne    406f55 <bin_sr_Print+0x55>
-    48 b8 ff ff ff ff ff    movabs $0x7fffffffffffffff,%rax
+    48 b8 ff ff ff ff ff    movabs $<steplimit>,%rax
     ff ff 7f
     48 39 c2                cmp    %rax,%rdx
     74 05                   je     406f55 <bin_sr_Print+0x55>
@@ -175,7 +176,7 @@ const char bin_sr_Print[] = {
     41 83 7f 08 00          cmpl   $0x0,0x8(%r15)
     49 89 47 10             mov    %rax,0x10(%r15)
     75 1d                   jne    406ed4 <bin_sr_Jne+0x54>
-    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    48 ba ff ff ff ff ff    movabs $<steplimit>,%rdx
     ff ff 7f
     48 39 d0                cmp    %rdx,%rax
     74 0e                   je     406ed4 <bin_sr_Jne+0x54>
@@ -234,7 +235,7 @@ const char bin_sr_Jne[] = {
     85 d2                   test   %edx,%edx
     49 89 47 10             mov    %rax,0x10(%r15)
     75 29                   jne    406e4f <bin_sr_Swap+0x8f>
-    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    48 ba ff ff ff ff ff    movabs $<steplimit>,%rdx
     ff ff 7f
     48 39 d0                cmp    %rdx,%rax
     74 1a                   je     406e4f <bin_sr_Swap+0x8f>
@@ -295,7 +296,7 @@ const char bin_sr_Swap[] = {
     85 d2                   test   %edx,%edx
     49 89 47 10             mov    %rax,0x10(%r15)
     75 29                   jne    406d7e <bin_sr_Dup+0x7e>
-    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    48 ba ff ff ff ff ff    movabs $<steplimit>,%rdx
     ff ff 7f
     48 39 d0                cmp    %rdx,%rax
     74 1a                   je     406d7e <bin_sr_Dup+0x7e>
@@ -346,7 +347,7 @@ const char bin_sr_Dup[] = {
     41 83 7f 08 00          cmpl   $0x0,0x8(%r15)
     49 89 47 10             mov    %rax,0x10(%r15)
     75 1d                   jne    406cd4 <bin_sr_Je+0x54>
-    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    48 ba ff ff ff ff ff    movabs $<steplimit>,%rdx
     ff ff 7f
     48 39 d0                cmp    %rdx,%rax
     74 0e                   je     406cd4 <bin_sr_Je+0x54>
@@ -397,7 +398,7 @@ const char bin_sr_Je[] = {
     85 d2                   test   %edx,%edx
     49 89 47 10             mov    %rax,0x10(%r15)
     75 11                   jne    406c3d <bin_sr_Inc+0x5d>
-    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    48 ba ff ff ff ff ff    movabs $<steplimit>,%rdx
     ff ff 7f
     48 39 d0                cmp    %rdx,%rax
     74 02                   je     406c3d <bin_sr_Inc+0x5d>
@@ -457,7 +458,7 @@ const char bin_sr_Inc[] = {
     85 d2                   test   %edx,%edx
     49 89 47 10             mov    %rax,0x10(%r15)
     75 29                   jne    406ba1 <bin_sr_Add+0x81>
-    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    48 ba ff ff ff ff ff    movabs $<steplimit>,%rdx
     ff ff 7f
     48 39 d0                cmp    %rdx,%rax
     74 1a                   je     406ba1 <bin_sr_Add+0x81>
@@ -518,7 +519,7 @@ const char bin_sr_Add[] = {
     85 d2                   test   %edx,%edx
     49 89 47 10             mov    %rax,0x10(%r15)
     75 29                   jne    406ae1 <bin_sr_Sub+0x81>
-    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    48 ba ff ff ff ff ff    movabs $<steplimit>,%rdx
     ff ff 7f
     48 39 d0                cmp    %rdx,%rax
     74 1a                   je     406ae1 <bin_sr_Sub+0x81>
@@ -579,7 +580,7 @@ const char bin_sr_Sub[] = {
     85 d2                   test   %edx,%edx
     49 89 47 10             mov    %rax,0x10(%r15)
     75 29                   jne    406a22 <bin_sr_Mul+0x82>
-    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    48 ba ff ff ff ff ff    movabs $<steplimit>,%rdx
     ff ff 7f
     48 39 d0                cmp    %rdx,%rax
     74 1a                   je     406a22 <bin_sr_Mul+0x82>
@@ -631,7 +632,7 @@ const char bin_sr_Mul[] = {
     85 d2                   test   %edx,%edx
     49 89 47 10             mov    %rax,0x10(%r15)
     75 11                   jne    40696e <bin_sr_Rand+0x4e>
-    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    48 ba ff ff ff ff ff    movabs $<steplimit>,%rdx
     ff ff 7f
     48 39 d0                cmp    %rdx,%rax
     74 02                   je     40696e <bin_sr_Rand+0x4e>
@@ -680,7 +681,7 @@ const char bin_sr_Rand[] = {
     85 d2                   test   %edx,%edx
     49 89 47 10             mov    %rax,0x10(%r15)
     75 11                   jne    4068dd <bin_sr_Dec+0x5d>
-    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    48 ba ff ff ff ff ff    movabs $<steplimit>,%rdx
     ff ff 7f
     48 39 d0                cmp    %rdx,%rax
     74 02                   je     4068dd <bin_sr_Dec+0x5d>
@@ -728,7 +729,7 @@ const char bin_sr_Dec[] = {
     85 d2                   test   %edx,%edx
     49 89 47 10             mov    %rax,0x10(%r15)
     75 11                   jne    <bin_sr_Drop+0x40>
-    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    48 ba ff ff ff ff ff    movabs $<steplimit>,%rdx
     ff ff 7f
     48 39 d0                cmp    %rdx,%rax
     74 02                   je     <bin_sr_Drop+0x40>
@@ -785,7 +786,7 @@ const char bin_sr_Drop[] = {
     85 c0                   test   %eax,%eax
     49 89 57 10             mov    %rdx,0x10(%r15)
     75 29                   jne    <bin_sr_Over+0x96>
-    48 b8 ff ff ff ff ff    movabs $0x7fffffffffffffff,%rax
+    48 b8 ff ff ff ff ff    movabs $<steplimit>,%rax
     ff ff 7f
     48 39 c2                cmp    %rax,%rdx
     74 1a                   je     <bin_sr_Over+0x96>
@@ -845,7 +846,7 @@ const char bin_sr_Over[] = {
     85 d2                   test   %edx,%edx
     49 89 47 10             mov    %rax,0x10(%r15)
     75 22                   jne    406705 <bin_sr_Mod+0x85>
-    48 ba ff ff ff ff ff    movabs $0x7fffffffffffffff,%rdx
+    48 ba ff ff ff ff ff    movabs $<steplimit>,%rdx
     ff ff 7f
     48 39 d0                cmp    %rdx,%rax
     74 13                   je     406705 <bin_sr_Mod+0x85>
