@@ -4,6 +4,7 @@
 #
 
 CFLAGS=-std=c11 -O2 -Wextra -Werror -gdwarf-3
+LDFLAGS = -lm
 
 COMMON_SRC = common.c
 COMMON_OBJ := $(COMMON_SRC:.c=.o)
@@ -33,7 +34,7 @@ $(DEPDIR)/%.d: ;
 .PRECIOUS: $(DEPDIR)/%.d
 -include $(patsubst %,$(DEPDIR)/%.d,$(basename $(ALL_SRCS)))
 
-$(ALL): $(COMMON_OBJ) -lm
+$(ALL): $(COMMON_OBJ)
 
 # #######################
 # Individual applications
