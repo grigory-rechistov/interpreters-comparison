@@ -409,11 +409,28 @@ void sr_Break(cpu_t *pcpu, decode_t *pdecoded) {
     return;
 }
 
+
+extern void srv_Halt(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Break(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Nop(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Push(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Drop(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Dup(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Swap(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Over(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Sub(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Inc(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Add(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Mod(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Jump(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Je(cpu_t *pcpu, decode_t *pdecoded);
+extern void srv_Print(cpu_t *pcpu, decode_t *pdecoded);
+
 service_routine_t service_routines[] = {
-        &sr_Break, &sr_Nop, &sr_Halt, &sr_Push, &sr_Print,
-        &sr_Jne, &sr_Swap, &sr_Dup, &sr_Je, &sr_Inc,
-        &sr_Add, &sr_Sub, &sr_Mul, &sr_Rand, &sr_Dec,
-        &sr_Drop, &sr_Over, &sr_Mod, &sr_Jump,
+        &srv_Break, &srv_Nop, &srv_Halt, &srv_Push, &srv_Print,
+        &sr_Jne, &srv_Swap, &srv_Dup, &srv_Je, &srv_Inc,
+        &srv_Add, &srv_Sub, &sr_Mul, &sr_Rand, &sr_Dec,
+        &srv_Drop, &srv_Over, &srv_Mod, &srv_Jump,
         &sr_And, &sr_Or, &sr_Xor,
         &sr_SHL, &sr_SHR,
         &sr_SQRT,
@@ -421,28 +438,100 @@ service_routine_t service_routines[] = {
         &sr_Pick
     };
 
+extern uint64_t cnt_LPush;
+extern uint64_t cnt_LPop;
+
+extern uint64_t cnt_Print;
+extern uint64_t cnt_Je;
+extern uint64_t cnt_Mod;
+extern uint64_t cnt_Add;
+extern uint64_t cnt_Sub;
+extern uint64_t cnt_Over;
+extern uint64_t cnt_Swap;
+extern uint64_t cnt_Dup;
+extern uint64_t cnt_Drop;
+extern uint64_t cnt_Push;
+extern uint64_t cnt_Nop;
+extern uint64_t cnt_Halt;
+extern uint64_t cnt_Break;
+extern uint64_t cnt_Inc;
+extern uint64_t cnt_Jump;
+
+extern uint64_t asm_main();
+
+extern uint64_t ret_steps;
+extern uint64_t ret_state;
+extern uint64_t ret_pc;
+extern uint64_t ret_sp;
+extern char * ret_err_ptr;
+extern uint32_t * ret_stack;
+
+
 int main(int argc, char **argv) {
+
     steplimit = parse_args(argc, argv);
-    cpu_t cpu = init_cpu();
 
-    decode_t decoded = fetch_decode(&cpu);
-    service_routines[decoded.opcode](&cpu, &decoded);
+    uint32_t stack[STACK_CAPACITY];
 
-    assert(cpu.state != Cpu_Running || cpu.steps == steplimit);
+    asm_main(service_routines, DefProgram, Cpu_Running, steplimit);
+
+    /* /\* decode_t decoded = fetch_decode(&cpu); *\/ */
+    /* /\* service_routines[decoded.opcode](&cpu, &decoded); *\/ */
+
     /* Print CPU state */
     printf("CPU executed %ld steps. End state \"%s\".\n",
-            cpu.steps, cpu.state == Cpu_Halted? "Halted":
-                       cpu.state == Cpu_Running? "Running": "Break");
-    printf("PC = %#x, SP = %d\n", cpu.pc, cpu.sp);
-    printf("Stack: ");
-    for (int32_t i=cpu.sp; i >= 0 ; i--) {
-        printf("%#10x ", cpu.stack[i]);
+            ret_steps, ret_state == Cpu_Halted? "Halted":
+                       ret_state == Cpu_Running? "Running": "Break");
+    printf("PC = %lu, SP = %lu\n", ret_pc, ret_sp);
+    printf("Errors: %s\n", ret_err_ptr);
+    printf("Counters :\n cnt_LPush : %20lu\n cnt_LPop  : %20lu\n cnt_Print : %20lu\n cnt_Je    : %20lu\n cnt_Mod   : %20lu\n cnt_Add   : %20lu\n cnt_Sub   : %20lu\n cnt_Over  : %20lu\n cnt_Swap  : %20lu\n cnt_Dup   : %20lu\n cnt_Drop  : %20lu\n cnt_Push  : %20lu\n cnt_Nop   : %20lu\n cnt_Halt  : %20lu\n cnt_Break : %20lu\n cnt_Inc   : %20lu\n cnt_Jump  : %20lu\n",
+           cnt_LPush, cnt_LPop, cnt_Print, cnt_Je, cnt_Mod, cnt_Add, cnt_Sub, cnt_Over, cnt_Swap, cnt_Dup, cnt_Drop, cnt_Push, cnt_Nop, cnt_Halt, cnt_Break, cnt_Inc, cnt_Jump);
+    printf("Stack (%ld): \n", ret_sp);
+    for (uint64_t i=0; i < ret_sp ; i++) {
+        printf("%2lu : %20lu : %20d\n",
+               i,
+               ((uintptr_t)(&ret_stack + (i))),
+               (*(uint32_t *)(&ret_stack + (i)))
+            );
     }
-    printf("%s\n", cpu.sp == -1? "(empty)": "");
 
     free(LoadedProgram);
 
-    return cpu.state == Cpu_Halted ||
-           (cpu.state == Cpu_Running &&
-            cpu.steps == steplimit)?0:1;
+    return ret_state == Cpu_Halted ||
+           (ret_state == Cpu_Running &&
+            ret_steps == steplimit)?0:1;
 }
+
+void fail(const char *message) {
+    /* printf("CPU executed %ld steps. End state \"%s\".\n", */
+    /*        ret_steps, ret_state == Cpu_Halted? "Halted": */
+    /*        ret_state == Cpu_Running? "Running": "Break"); */
+
+    fprintf(stderr, "FAIL: %s\n", message);
+    exit(EXIT_FAILURE);
+}
+
+/*
+CPU executed 5462956110 steps. End state "Halted".
+PC = 32, SP = 2
+    Errors: no errors.
+    Counters :
+    cnt_Print :                 9592
+    cnt_Je    :            910487889
+    cnt_Mod   :            455189149
+    cnt_Add   :                    0
+    cnt_Sub   :            455298740
+    cnt_Over  :           1820985370
+    cnt_Swap  :            910387890
+    cnt_Dup   :                    0
+    cnt_Drop  :                99998
+    cnt_Push  :               100000
+    cnt_Nop   :                    0
+    cnt_Halt  :                    1
+    cnt_Break :                    0
+    cnt_Inc   :            455198741
+    cnt_Jump  :            455198741
+    Stack (2):
+    0 :      100715924241663 :               100000
+    1 :      100715924241671 :               100000
+*/

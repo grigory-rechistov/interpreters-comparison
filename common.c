@@ -187,8 +187,8 @@ void report_usage_and_exit(char * exec_name, int ret_code) {
     exit (ret_code);
 }
 
-long long parse_args(int argc, char** argv) {
-    long long steplimit = LLONG_MAX;
+uint64_t parse_args(int argc, char** argv) {
+    uint64_t steplimit = LLONG_MAX;
     FILE *prog_file = NULL;
 
     for (int i = 1; i < argc; ++i) {
@@ -219,7 +219,7 @@ long long parse_args(int argc, char** argv) {
         }
     }
 
-    unsigned long long filelen = 0;
+    uint64_t filelen = 0;
     if (prog_file != NULL) {
         fseek(prog_file, 0, SEEK_END);  // Jump to the end of the file
         filelen = ftell(prog_file);     // Get the current byte offset in the file

@@ -62,7 +62,7 @@ char gen_code[JIT_CODE_SIZE] __attribute__ ((section (".text#")))
                              __attribute__ ((aligned(4096)));
 
 /* TODO:a global - not good. Should be moved into cpu state or somewhere else */
-static long long steplimit = LLONG_MAX;
+static uint64_t steplimit = LLONG_MAX;
 
 static inline decode_t decode_at_address(const Instr_t* prog, uint32_t addr) {
     assert(addr < PROGRAM_SIZE);
@@ -446,7 +446,7 @@ int main(int argc, char **argv) {
 
     assert(cpu.state != Cpu_Running || cpu.steps == steplimit);
     /* Print CPU state */
-    printf("CPU executed %lld steps. End state \"%s\".\n",
+    printf("CPU executed %ld steps. End state \"%s\".\n",
             cpu.steps, cpu.state == Cpu_Halted? "Halted":
                        cpu.state == Cpu_Running? "Running": "Break");
     printf("PC = %#x, SP = %d\n", cpu.pc, cpu.sp);
