@@ -67,14 +67,15 @@
 .macro FETCH_CHECKED
     movq    $512, opcode_full   # (opcode_full := max_program_size)
     cmp     pc, opcode_full
-    ja      1f  # ------(pc < max_program_size)-------------+
-    movq    two, state          # = 2 (Cpu_Break)       #   |
-    movq    zero, opcode_full   # = 0 (Instr_Break)     #   |
-    lea     sz_pc_out_of_bound(%rip), %rax              #   |
-    call    save_rets_and_exit                          #   |
-1:  # <-----------------------------------------------------+
+    jb      handle_pc_out_of_bound  # (pc > max_program_size)
     FETCH
 .endm
+
+handle_pc_out_of_bound:
+    movq    two, state          # = 2 (Cpu_Break)
+    movq    zero, opcode_full   # = 0 (Instr_Break)
+    lea     sz_pc_out_of_bound(%rip), %rax
+    jmp     save_rets_and_exit
 
     .section .data
 sz_pc_out_of_bound:
@@ -127,33 +128,35 @@ jmptbl_\@:                      #                               |
     .quad len_1_\@              # Rot                           |
     .quad len_1_\@              # Pick                          |
     .text                       #                               |
-len_1_\@:                       #                               |
-    mov     one, opcode_len     #                               |
-    jmp     ret_point_\@        #                               |
 len_2_immed_\@:                 #                               |
     mov     two, opcode_len     #                               |
     mov     4(prog_mem, pc, 4), immediate   # prog_mem[pc+1]    |
     jmp     ret_point_\@        #                               |
+    movq    one, opcode_len             # opcode_len = 1        |
+    jmp     ret_point_\@        #                               |
 over_case_\@: # <-----------------------------------------------+
     mov     $Instr_Break, opcode        # unk_opcode := break
-    movq    one, opcode_len             # opcode_len = 1
+len_1_\@:
+    mov     one, opcode_len
 ret_point_\@:
 .endm
 
 
 .macro BAIL_ON_ERROR
     test    state, state
-    je      1f
+    jne     handle_state_is_not_running
+.endm
+
+handle_state_is_not_running:
     lea     sz_state_is_not_running(%rip), %rax
     mov     two, state # Cpu_Break
-    call    save_rets_and_exit
-1:
-.endm
+    jmp     save_rets_and_exit
 
 
 .macro DISPATCH
     jmp     *(routines, opcode_full, 8)
 .endm
+
 
 .macro ADVANCE_PC
     add     opcode_len, pc
@@ -184,8 +187,9 @@ sz_steplimit_reached:
     .section .text
 
 
+
 .macro PUSH_IMM reg
-    incq    cnt_LPush(%rip)
+    # incq    cnt_LPush(%rip)
     cmp     sp, stack_min
     jae     handle_overflow
     push    \reg
@@ -201,10 +205,32 @@ sz_stack_overflow:
     .asciz "stack overflow"
     .section .text
 
+.macro VM_PUSH tmpreg args:vararg
+    # incq    cnt_LPush(%rip)
+    # подсчитаем количество макро-аргументов
+    .set num_args, 0
+    .irp arg, \args
+     .set num_args, num_args + 1
+    .endr
+
+    // Смещение для LEA
+    .set offset, -8 * num_args
+    lea     offset(sp), \tmpreg
+    cmp     \tmpreg, stack_min
+    jae     handle_overflow
+
+    // Итерация и push каждого аргумента
+    .irp reg, \args
+     push   \reg
+    .endr
+.endm
+
+
+
 .macro POP_IMM reg
-    incq    cnt_LPop(%rip)
+    # incq    cnt_LPop(%rip)
     cmp     sp, stack_max
-    jbe     handle_underflow
+    jb      handle_underflow
     pop     \reg
 .endm
 
@@ -218,19 +244,37 @@ sz_stack_underflow:
     .asciz "stack underflow"
     .section .text
 
+.macro VM_POP tmpreg:req args:vararg
+    # incq    cnt_LPop(%rip)
+    # подсчитаем количество макро-аргументов
+    .set num_args, 0
+    .irp arg, \args
+        .set num_args, num_args + 1
+    .endr
 
-.macro pick
-    # TODO
+    # вычислим смещение для LEA
+    .set offset, 8*num_args
+    lea offset(sp), \tmpreg
+
+    # проверим не выходим ли за минимум
+    cmp     \tmpreg, stack_max
+    jb      handle_underflow
+
+    # обработаем varargs
+    .irp reg, \args
+    pop     \reg
+    .endr
 .endm
 
 
 #### ROUTINES ####
 
+
 .macro RTN name
     .global srv_\name
     .type srv_\name, @function
 srv_\name:
-    incq    cnt_\name(%rip)
+    # incq    cnt_\name(%rip)
 .endm
 
 
@@ -272,39 +316,35 @@ srv_\name:
     RTN Dup
     BAIL_ON_ERROR
     POP_IMM immediate_full
-    PUSH_IMM immediate_full
-    PUSH_IMM immediate_full
+    VM_PUSH opcode_full immediate_full immediate_full
     ADVANCE_PC
     FETCH_DECODE
     DISPATCH
 
 
     RTN Swap
-    POP_IMM immediate_full
-    POP_IMM %rax
+    VM_POP opcode_full immediate_full %rax
     BAIL_ON_ERROR
-    PUSH_IMM immediate_full
-    PUSH_IMM %rax
+    VM_PUSH opcode_full immediate_full %rax
     ADVANCE_PC
     FETCH_DECODE
     DISPATCH
 
 
     RTN Over
-    POP_IMM immediate_full
-    POP_IMM %rax
+    # мы можем использовать opcode_full как tmpreg, так как
+    # после FETCH он не используется и будет перезаписан
+    # в следующем FETCH
+    VM_POP opcode_full immediate_full %rax
     BAIL_ON_ERROR
-    PUSH_IMM %rax
-    PUSH_IMM immediate_full
-    PUSH_IMM %rax
+    VM_PUSH opcode_full %rax immediate_full %rax
     ADVANCE_PC
     FETCH_DECODE
     DISPATCH
 
 
     RTN Sub
-    POP_IMM immediate_full
-    POP_IMM %rax
+    VM_POP opcode_full immediate_full %rax
     sub     %rax, immediate_full
     PUSH_IMM immediate_full
     ADVANCE_PC
@@ -313,7 +353,6 @@ srv_\name:
 
 
     RTN Inc
-
     POP_IMM immediate_full
     BAIL_ON_ERROR
     inc     immediate_full
@@ -336,8 +375,7 @@ srv_\name:
 
 
     RTN Mod
-    POP_IMM %rax
-    POP_IMM immediate_full
+    VM_POP opcode_full %rax immediate_full
     BAIL_ON_ERROR
     test    immediate_full, immediate_full
     jne     1f
