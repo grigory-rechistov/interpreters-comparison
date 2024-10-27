@@ -6,7 +6,13 @@
     # из ADVANCE_PC, тогда он не вполне корректен с точки зрения
     # профилированся скорости
 
+# По-возможности, старайтесь уклониться от исполнения кода:
+# невыполнение кода занимает меньше всего времени
 .set DBGCNT, 0
+.set STEPLIMIT_CHECK, 0
+.set MAX_PROGRAM_SIZE_CHECK, 0
+.set STATE_RUNNING_CHECK, 0
+.set STACK_CHECK, 0
 
 #define Instr_Break   0x0000 /* Abnormal end */
 #define Instr_Nop     0x0001
@@ -72,9 +78,11 @@ FETCH_DECODE_\@:
     # RET: opcode
 .macro FETCH_CHECKED
 FETCH_CHECKED_\@:
+    .if MAX_PROGRAM_SIZE_CHECK
     movq    $512, opcode_full   # (opcode_full := max_program_size)
     cmp     pc, opcode_full
     jb      handle_pc_out_of_bound  # (pc > max_program_size)
+    .endif
     FETCH
 .endm
 
@@ -108,14 +116,18 @@ DECODE_\@:
 
 
 .macro BAIL_ON_ERROR
+    .if STATE_RUNNING_CHECK
     test    state, state
     jne     handle_state_is_not_running
+    .endif
 .endm
 
+.if STATE_RUNNING_CHECK
 handle_state_is_not_running:
     lea     sz_state_is_not_running(%rip), %rax
     mov     two, state # Cpu_Break
     jmp     save_rets_and_exit
+.endif
 
 
 .macro DISPATCH
@@ -127,26 +139,43 @@ DISPATCH_\@:
 .macro ADVANCE_PC cnt:req
 ADVANCE_PC_\@:
     .rept \cnt
-     inc    pc
+    inc    pc
     .endr
+
+    .if STEPLIMIT_CHECK
+    # Аксакалы верят что если разнести инкремент и проверку, то
+    # это позволит процессору заняться в промежутке чем-то еще
     inc     steps
+    .endif
+
+    .if STATE_RUNNING_CHECK
     test    state, state        # Cpu_Running(0) != state
     jne     handle_state_not_running
+    .endif
+
+    .if STEPLIMIT_CHECK
     cmp     steps, steplimit    # steps >= steplimit
     jl      handle_steplimit_reached
+    .endif
 .endm
 
+.if STATE_RUNNING_CHECK
 handle_state_not_running:
     lea     sz_state_is_not_running(%rip), %rax
     jmp     set_state_break
+.endif
 
+.if STEPLIMIT_CHECK
 handle_steplimit_reached:
     lea     sz_steplimit_reached(%rip), %rax
     jmp     set_state_break
+.endif
 
+.if (STATE_RUNNING_CHECK || STEPLIMIT_CHECK)
 set_state_break:
     mov     two, state # Cpu_Break
     jmp     save_rets_and_exit
+.endif
 
     .section .data
 sz_state_is_not_running:
@@ -161,11 +190,15 @@ sz_steplimit_reached:
     .if DBGCNT
     incq    cnt_LPush(%rip)
     .endif
+
+    .if STACK_CHECK
     cmp     sp, stack_min
     jae     handle_overflow
+    .endif
     push    \reg
 .endm
 
+.if STACK_CHECK
 handle_overflow:
     lea     sz_stack_overflow(%rip), %rax
     mov     two, state # Cpu_Break
@@ -175,6 +208,7 @@ handle_overflow:
 sz_stack_overflow:
     .asciz "stack overflow"
     .section .text
+.endif
 
 .macro VM_PUSH tmpreg args:vararg
     .if DBGCNT
@@ -186,11 +220,14 @@ sz_stack_overflow:
      .set num_args, num_args + 1
     .endr
 
-    // Смещение для LEA
+    .if STACK_CHECK
+    # смещение для LEA
     .set offset, -8 * num_args
     lea     offset(sp), \tmpreg
+    # проверим не выходим ли за минимум
     cmp     \tmpreg, stack_min
     jae     handle_overflow
+    .endif
 
     // Итерация и push каждого аргумента
     .irp reg, \args
@@ -204,11 +241,14 @@ sz_stack_overflow:
     .if DBGCNT
     incq    cnt_LPop(%rip)
     .endif
+    .if STACK_CHECK
     cmp     sp, stack_max
     jb      handle_underflow
+    .endif
     pop     \reg
 .endm
 
+.if STACK_CHECK
 handle_underflow:
     lea     sz_stack_underflow(%rip), %rax
     mov     two, state # Cpu_Break
@@ -218,6 +258,7 @@ handle_underflow:
 sz_stack_underflow:
     .asciz "stack underflow"
     .section .text
+.endif
 
 .macro VM_POP tmpreg:req args:vararg
     .if DBGCNT
@@ -229,13 +270,14 @@ sz_stack_underflow:
         .set num_args, num_args + 1
     .endr
 
+    .if STACK_CHECK
     # вычислим смещение для LEA
     .set offset, 8*num_args
     lea offset(sp), \tmpreg
-
-    # проверим не выходим ли за минимум
+    # проверим не выходим ли за максимум
     cmp     \tmpreg, stack_max
     jb      handle_underflow
+    .endif
 
     # обработаем varargs
     .irp reg, \args
@@ -468,6 +510,7 @@ asm_main:
     pushq   %r15
     movq    %rsp, old_rsp(%rip)
 
+    xor     %r15, %r15
     xor     steps, steps
     xor     pc, pc
     xor     opcode_full, opcode_full
@@ -489,7 +532,9 @@ save_rets_and_exit: # <----
     jz      1f
     mov     %rax, ret_err_ptr(%rip)
 1:
+    .if STEPLIMIT_CHECK
     movq    steps, ret_steps(%rip)
+    .endif
     movq    state, ret_state(%rip)
     movq    pc, ret_pc(%rip)
     # Save stack pos
