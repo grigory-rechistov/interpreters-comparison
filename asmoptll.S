@@ -14,6 +14,8 @@
 .set STATE_RUNNING_CHECK, 0
 .set STACK_CHECK, 0
 
+.set OPT_ON_SITE, 1
+
 #define Instr_Break   0x0000 /* Abnormal end */
 #define Instr_Nop     0x0001
 #define Instr_Halt    0x0002 /* Normal program end */
@@ -214,6 +216,7 @@ sz_stack_overflow:
     .if DBGCNT
     incq    cnt_VM_Push(%rip)
     .endif
+
     # подсчитаем количество макро-аргументов
     .set num_args, 0
     .irp arg, \args
@@ -264,6 +267,7 @@ sz_stack_underflow:
     .if DBGCNT
     incq    cnt_VM_Pop(%rip)
     .endif
+
     # подсчитаем количество макро-аргументов
     .set num_args, 0
     .irp arg, \args
@@ -339,7 +343,6 @@ srv_\name:
     POP_IMM immediate_full
     VM_PUSH opcode_full immediate_full immediate_full
     ADVANCE_PC 1
-lab:
     FETCH_DECODE
     DISPATCH
 
@@ -354,33 +357,47 @@ lab:
 
 
     RTN Over
-    # мы можем использовать opcode_full как tmpreg, так как
-    # после FETCH он не используется и будет перезаписан
-    # в следующем FETCH
-    VM_POP opcode_full immediate_full %rax
-    BAIL_ON_ERROR
-    VM_PUSH opcode_full %rax immediate_full %rax
+    .if OPT_ON_SITE
+     movq       8(sp), %rax
+     PUSH_IMM   %rax
+    .else
+     # мы можем использовать opcode_full как tmpreg, так как
+     # после FETCH он не используется и будет перезаписан
+     # в следующем FETCH
+     VM_POP opcode_full immediate_full %rax
+     BAIL_ON_ERROR
+     VM_PUSH opcode_full %rax immediate_full %rax
+    .endif
     ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
 
     RTN Sub
-    VM_POP opcode_full immediate_full %rax
-    sub     %rax, immediate_full
-    PUSH_IMM immediate_full
+    .if OPT_ON_SITE
+     POP_IMM  immediate_full
+     subq     immediate_full, (sp)
+    .else
+     VM_POP   opcode_full immediate_full %rax
+     sub      %rax, immediate_full
+     PUSH_IMM immediate_full
+    .endif
     ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
 
     RTN Inc
-    POP_IMM immediate_full
-    BAIL_ON_ERROR
-    inc     immediate_full
-    # Тут можно оптимизировать проверки, уже выполенные в POP_IMM
-    # а еще лучше - изменять прямо на месте, в памяти
-    PUSH_IMM immediate_full
+    .if OPT_ON_SITE
+     incq    (sp)
+    .else
+     POP_IMM immediate_full
+     BAIL_ON_ERROR
+     inc     immediate_full
+     # Тут можно оптимизировать проверки, уже выполненные в POP_IMM
+     # а еще лучше - изменять прямо на месте, в памяти
+     PUSH_IMM immediate_full
+    .endif
     ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
