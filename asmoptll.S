@@ -47,7 +47,6 @@
 # CPU_T
 #define routines        %rdi
 #define prog_mem        %rsi
-#define state           %rdx
 #define steplimit       %rcx
 #define steps           %r8
 #define pc              %r9
@@ -63,10 +62,15 @@
 #define two             %r12
 
 # DECODE_T
-#define opcode          %r13d
-#define opcode_full     %r13
+#define opcode          %edx
+#define opcode_full     %rdx
+
+#define optional        %r13
+
 #define immediate       %r14d
 #define immediate_full  %r14
+#define state           %r15
+
 
 .section .text
 .macro FETCH_DECODE
@@ -303,7 +307,7 @@ srv_\name:
 .endm
 
 
-    RTN Break
+    RTN Break   ## ;; <- NB! Not used
     /* No need to dispatch after Break */
     mov     two, state
     xor     %eax, %eax
@@ -317,7 +321,8 @@ srv_\name:
     jmp     save_rets_and_exit
 
 
-    RTN Nop
+
+    RTN Nop     ## ;; <- NB! Not used
     /* Do nothing */
     ADVANCE_PC 1
     FETCH_DECODE
@@ -338,7 +343,7 @@ srv_\name:
     DISPATCH
 
 
-    RTN Dup
+    RTN Dup     ## ;; <- NB! Not used
     BAIL_ON_ERROR
     POP_IMM immediate_full
     VM_PUSH opcode_full immediate_full immediate_full
@@ -403,7 +408,7 @@ srv_\name:
     DISPATCH
 
 
-    RTN Add
+    RTN Add     ## ;; <- NB! Not used
     POP_IMM immediate_full
     POP_IMM %rax
     BAIL_ON_ERROR
@@ -418,21 +423,19 @@ srv_\name:
     VM_POP opcode_full %rax immediate_full
     BAIL_ON_ERROR
     test    immediate_full, immediate_full
-    jne     1f
-    mov     two, state
-    mov     sz_divide_zero(%rip), %eax
-    jmp     save_rets_and_exit
-1:
-    # TODO: Здесь можно оптимизировать размещение регистров
-    push    %rdx
-    xor     %rdx, %rdx
-    div     immediate_full  # rdx:rax -> rax, rdx
-    xchg    %rdx, immediate_full
-    pop     %rdx
-    PUSH_IMM immediate_full
+    je      handle_divide_zero
+    # Деление
+    xor     %rdx, %rdx          # rdx = opcode_full
+    div     immediate_full      # rdx:rax -> rax, rdx
+    PUSH_IMM %rdx
     ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
+
+handle_divide_zero:
+    mov     two, state
+    mov     sz_divide_zero(%rip), %eax
+    jmp     save_rets_and_exit
 
     .section .data
 sz_divide_zero:
@@ -526,6 +529,8 @@ asm_main:
     pushq   %r14
     pushq   %r15
     movq    %rsp, old_rsp(%rip)
+
+    mov     %rdx, state
 
     xor     %r15, %r15
     xor     steps, steps
