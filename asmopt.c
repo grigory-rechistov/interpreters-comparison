@@ -1,5 +1,6 @@
-/*  tailrecursive.c - a tail recursion optimization interpreter
+/*  asmopt.c - a tail recursion optimization interpreter
     for a stack virtual machine.
+    Copyright (c) 2024 Glukhov Mikhail, based on work of
     Copyright (c) 2015, 2016 Grigory Rechistov. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
