@@ -12,7 +12,7 @@
 .set STEPLIMIT_CHECK, 0
 .set MAX_PROGRAM_SIZE_CHECK, 0
 .set STATE_RUNNING_CHECK, 0
-.set STACK_CHECK, 0
+.set STACK_CHECK, 1
 
 .set OPT_ON_SITE, 1
 
@@ -45,31 +45,29 @@
 #define Instr_Pick    0x001a
 
 # CPU_T
-#define routines        %rdi
-#define prog_mem        %rsi
-#define steplimit       %rcx
-#define steps           %r8
-#define pc              %r9
-#define stack_max       %rbp
-#define stack_min       %rbx
-#define sp              %rsp
+#define routines        %rdi    #
+#define prog_mem        %rsi    #
+#define steplimit       %rcx    #
+#define steps           %r8     #
+#define pc              %r9     #
+#define stack_max       %rbp    #
+#define stack_min       %rbx    #
+#define sp              %rsp    #
 
+#define top             %r13
 # 0 = Cpu_Running
-#define zero            %r10
+#define subtop          %r10
 # 1 = Cpu_Halted
 #define one             %r11
 # 2 = Cpu_Break
 #define two             %r12
 
 # DECODE_T
-#define opcode          %edx
-#define opcode_full     %rdx
-
-#define optional        %r13
-
-#define immediate       %r14d
-#define immediate_full  %r14
-#define state           %r15
+#define opcode          %edx    #
+#define opcode_full     %rdx    #
+#define immediate       %r14d   #
+#define immediate_full  %r14    #
+#define state           %r15    #
 
 
 .section .text
@@ -93,8 +91,8 @@ FETCH_CHECKED_\@:
 .endm
 
 handle_pc_out_of_bound:
-    movq    two, state          # = 2 (Cpu_Break)
-    movq    zero, opcode_full   # = 0 (Instr_Break)
+    movq    two, state                 # = 2 (Cpu_Break)
+    xor     opcode_full, opcode_full   # = 0 (Instr_Break)
     lea     sz_pc_out_of_bound(%rip), %rax
     jmp     save_rets_and_exit
 
@@ -197,11 +195,12 @@ sz_steplimit_reached:
     incq    cnt_LPush(%rip)
     .endif
 
+    push    \reg
+
     .if STACK_CHECK
     cmp     sp, stack_min
     jae     handle_overflow
     .endif
-    push    \reg
 .endm
 
 .if STACK_CHECK
@@ -227,6 +226,11 @@ sz_stack_overflow:
      .set num_args, num_args + 1
     .endr
 
+    # push каждого аргумента
+    .irp reg, \args
+     push   \reg
+    .endr
+
     .if STACK_CHECK
     # смещение для LEA
     .set offset, -8 * num_args
@@ -235,11 +239,6 @@ sz_stack_overflow:
     cmp     \tmpreg, stack_min
     jae     handle_overflow
     .endif
-
-    // Итерация и push каждого аргумента
-    .irp reg, \args
-     push   \reg
-    .endr
 .endm
 
 
@@ -248,11 +247,13 @@ sz_stack_overflow:
     .if DBGCNT
     incq    cnt_LPop(%rip)
     .endif
+
+    pop     \reg
+
     .if STACK_CHECK
     cmp     sp, stack_max
     jb      handle_underflow
     .endif
-    pop     \reg
 .endm
 
 .if STACK_CHECK
@@ -278,6 +279,11 @@ sz_stack_underflow:
         .set num_args, num_args + 1
     .endr
 
+    # pop каждого аргумента
+    .irp reg, \args
+    pop     \reg
+    .endr
+
     .if STACK_CHECK
     # вычислим смещение для LEA
     .set offset, 8*num_args
@@ -286,11 +292,6 @@ sz_stack_underflow:
     cmp     \tmpreg, stack_max
     jb      handle_underflow
     .endif
-
-    # обработаем varargs
-    .irp reg, \args
-    pop     \reg
-    .endr
 .endm
 
 
@@ -464,16 +465,6 @@ sz_divide_zero:
 
 
     RTN Print
-    # Требуется сохранить
-    # steps
-    # state
-    # steplimit
-    # two
-
-    # Можно не сохранять (будут перезаписаны)
-    # rax
-    # opcode_full r13
-    # opcode
     POP_IMM %rax
     BAIL_ON_ERROR
 
