@@ -438,6 +438,10 @@ service_routine_t service_routines[] = {
         &sr_Pick
     };
 
+extern uint64_t cnt_VM_Push;
+extern uint64_t cnt_VM_Pop;
+
+
 extern uint64_t cnt_LPush;
 extern uint64_t cnt_LPop;
 
@@ -484,8 +488,8 @@ int main(int argc, char **argv) {
                        ret_state == Cpu_Running? "Running": "Break");
     printf("PC = %lu, SP = %lu\n", ret_pc, ret_sp);
     printf("Errors: %s\n", ret_err_ptr);
-    printf("Counters :\n cnt_LPush : %20lu\n cnt_LPop  : %20lu\n cnt_Print : %20lu\n cnt_Je    : %20lu\n cnt_Mod   : %20lu\n cnt_Add   : %20lu\n cnt_Sub   : %20lu\n cnt_Over  : %20lu\n cnt_Swap  : %20lu\n cnt_Dup   : %20lu\n cnt_Drop  : %20lu\n cnt_Push  : %20lu\n cnt_Nop   : %20lu\n cnt_Halt  : %20lu\n cnt_Break : %20lu\n cnt_Inc   : %20lu\n cnt_Jump  : %20lu\n",
-           cnt_LPush, cnt_LPop, cnt_Print, cnt_Je, cnt_Mod, cnt_Add, cnt_Sub, cnt_Over, cnt_Swap, cnt_Dup, cnt_Drop, cnt_Push, cnt_Nop, cnt_Halt, cnt_Break, cnt_Inc, cnt_Jump);
+    printf("Counters     :\n cnt_VM_Push : %20lu\n cnt_VM_Pop  : %20lu\n cnt_LPush   : %20lu\n cnt_LPop    : %20lu\n cnt_Print   : %20lu\n cnt_Je      : %20lu\n cnt_Mod     : %20lu\n cnt_Add     : %20lu\n cnt_Sub     : %20lu\n cnt_Over    : %20lu\n cnt_Swap    : %20lu\n cnt_Dup     : %20lu\n cnt_Drop    : %20lu\n cnt_Push    : %20lu\n cnt_Nop     : %20lu\n cnt_Halt    : %20lu\n cnt_Break   : %20lu\n cnt_Inc     : %20lu\n cnt_Jump    : %20lu\n",
+           cnt_VM_Push, cnt_VM_Pop, cnt_LPush, cnt_LPop, cnt_Print, cnt_Je, cnt_Mod, cnt_Add, cnt_Sub, cnt_Over, cnt_Swap, cnt_Dup, cnt_Drop, cnt_Push, cnt_Nop, cnt_Halt, cnt_Break, cnt_Inc, cnt_Jump);
     printf("Stack (%ld): \n", ret_sp);
     for (uint64_t i=0; i < ret_sp ; i++) {
         printf("%2lu : %20lu : %20d\n",

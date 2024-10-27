@@ -1,5 +1,12 @@
 
+# TODO: кеширование верхних элементов стека
 # TODO: самомодифицирующийся код при возвратах и проверках стека
+
+    # VRFY: возможно нативный код не имеет инкремента steps
+    # из ADVANCE_PC, тогда он не вполне корректен с точки зрения
+    # профилированся скорости
+
+.set DBGCNT, 0
 
 #define Instr_Break   0x0000 /* Abnormal end */
 #define Instr_Nop     0x0001
@@ -52,11 +59,10 @@
 #define opcode_full     %r13
 #define immediate       %r14d
 #define immediate_full  %r14
-#define opcode_len      %r15
 
 .section .text
-
 .macro FETCH_DECODE
+FETCH_DECODE_\@:
     FETCH_CHECKED
     DECODE
 .endm
@@ -65,6 +71,7 @@
     # (PC > 512) then error, exit
     # RET: opcode
 .macro FETCH_CHECKED
+FETCH_CHECKED_\@:
     movq    $512, opcode_full   # (opcode_full := max_program_size)
     cmp     pc, opcode_full
     jb      handle_pc_out_of_bound  # (pc > max_program_size)
@@ -83,63 +90,21 @@ sz_pc_out_of_bound:
     .section .text
 
 
+
     # RET: opcode
 .macro FETCH
+FETCH_\@:
     mov     (prog_mem, pc, 4), opcode
 .endm
 
 
     # IN: opcode (от FETCH, который всегда предшествует)
-    # RET: opcode_len immediate
+    # RET: immediate
 .macro DECODE
-    cmp  $Instr_Pick, opcode        # opcode за пределом?
-    ja   over_case_\@  # ----(Instr_Pick > opcode)--------------+
-    lea  jmptbl_\@(%rip), %rax # Загрузка таблицы переходов     |
-    jmp  *(%rax,opcode_full,8)  # Переход через таблицу         |
-    # --------------------------#                               |
-    # TODO: Тут можно оптимизировать, переупорядочив опкоды     |
-    .section .data              #                               |
-jmptbl_\@:                      #                               |
-    .quad len_1_\@              # Break                         |
-    .quad len_1_\@              # Nop                           |
-    .quad len_1_\@              # Halt                          |
-    .quad len_2_immed_\@        # Push                          |
-    .quad len_1_\@              # Print                         |
-    .quad len_2_immed_\@        # JNE                           |
-    .quad len_1_\@              # Swap                          |
-    .quad len_1_\@              # Dup                           |
-    .quad len_2_immed_\@        # JE                            |
-    .quad len_1_\@              # Inc                           |
-    .quad len_1_\@              # Add                           |
-    .quad len_1_\@              # Sub                           |
-    .quad len_1_\@              # Mul                           |
-    .quad len_1_\@              # Rand                          |
-    .quad len_1_\@              # Dec                           |
-    .quad len_1_\@              # Drop                          |
-    .quad len_1_\@              # Over                          |
-    .quad len_1_\@              # Mod                           |
-    .quad len_2_immed_\@        # Jump                          |
-    .quad len_1_\@              # And                           |
-    .quad len_1_\@              # Or                            |
-    .quad len_1_\@              # Xor                           |
-    .quad len_1_\@              # SHL                           |
-    .quad len_1_\@              # SHR                           |
-    .quad len_1_\@              # SQRT                          |
-    .quad len_1_\@              # Rot                           |
-    .quad len_1_\@              # Pick                          |
-    .text                       #                               |
-len_2_immed_\@:                 #                               |
-    mov     two, opcode_len     #                               |
-    mov     4(prog_mem, pc, 4), immediate   # prog_mem[pc+1]    |
-    jmp     ret_point_\@        #                               |
-    movq    one, opcode_len             # opcode_len = 1        |
-    jmp     ret_point_\@        #                               |
-over_case_\@: # <-----------------------------------------------+
-    mov     $Instr_Break, opcode        # unk_opcode := break
-len_1_\@:
-    mov     one, opcode_len
-ret_point_\@:
+DECODE_\@:
+    mov     4(prog_mem, pc, 4), immediate   # prog_mem[pc+1]
 .endm
+
 
 
 .macro BAIL_ON_ERROR
@@ -154,12 +119,16 @@ handle_state_is_not_running:
 
 
 .macro DISPATCH
+DISPATCH_\@:
     jmp     *(routines, opcode_full, 8)
 .endm
 
 
-.macro ADVANCE_PC
-    add     opcode_len, pc
+.macro ADVANCE_PC cnt:req
+ADVANCE_PC_\@:
+    .rept \cnt
+     inc    pc
+    .endr
     inc     steps
     test    state, state        # Cpu_Running(0) != state
     jne     handle_state_not_running
@@ -189,7 +158,9 @@ sz_steplimit_reached:
 
 
 .macro PUSH_IMM reg
-    # incq    cnt_LPush(%rip)
+    .if DBGCNT
+    incq    cnt_LPush(%rip)
+    .endif
     cmp     sp, stack_min
     jae     handle_overflow
     push    \reg
@@ -206,7 +177,9 @@ sz_stack_overflow:
     .section .text
 
 .macro VM_PUSH tmpreg args:vararg
-    # incq    cnt_LPush(%rip)
+    .if DBGCNT
+    incq    cnt_VM_Push(%rip)
+    .endif
     # подсчитаем количество макро-аргументов
     .set num_args, 0
     .irp arg, \args
@@ -228,7 +201,9 @@ sz_stack_overflow:
 
 
 .macro POP_IMM reg
-    # incq    cnt_LPop(%rip)
+    .if DBGCNT
+    incq    cnt_LPop(%rip)
+    .endif
     cmp     sp, stack_max
     jb      handle_underflow
     pop     \reg
@@ -245,7 +220,9 @@ sz_stack_underflow:
     .section .text
 
 .macro VM_POP tmpreg:req args:vararg
-    # incq    cnt_LPop(%rip)
+    .if DBGCNT
+    incq    cnt_VM_Pop(%rip)
+    .endif
     # подсчитаем количество макро-аргументов
     .set num_args, 0
     .irp arg, \args
@@ -274,7 +251,9 @@ sz_stack_underflow:
     .global srv_\name
     .type srv_\name, @function
 srv_\name:
-    # incq    cnt_\name(%rip)
+    .if DBGCNT
+    incq    cnt_\name(%rip)
+    .endif
 .endm
 
 
@@ -294,21 +273,21 @@ srv_\name:
 
     RTN Nop
     /* Do nothing */
-    ADVANCE_PC
+    ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
 
     RTN Push
     PUSH_IMM immediate_full
-    ADVANCE_PC
+    ADVANCE_PC 2
     FETCH_DECODE
     DISPATCH
 
 
     RTN Drop
     POP_IMM immediate_full
-    ADVANCE_PC
+    ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
@@ -317,7 +296,8 @@ srv_\name:
     BAIL_ON_ERROR
     POP_IMM immediate_full
     VM_PUSH opcode_full immediate_full immediate_full
-    ADVANCE_PC
+    ADVANCE_PC 1
+lab:
     FETCH_DECODE
     DISPATCH
 
@@ -326,7 +306,7 @@ srv_\name:
     VM_POP opcode_full immediate_full %rax
     BAIL_ON_ERROR
     VM_PUSH opcode_full immediate_full %rax
-    ADVANCE_PC
+    ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
@@ -338,7 +318,7 @@ srv_\name:
     VM_POP opcode_full immediate_full %rax
     BAIL_ON_ERROR
     VM_PUSH opcode_full %rax immediate_full %rax
-    ADVANCE_PC
+    ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
@@ -347,7 +327,7 @@ srv_\name:
     VM_POP opcode_full immediate_full %rax
     sub     %rax, immediate_full
     PUSH_IMM immediate_full
-    ADVANCE_PC
+    ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
@@ -357,8 +337,9 @@ srv_\name:
     BAIL_ON_ERROR
     inc     immediate_full
     # Тут можно оптимизировать проверки, уже выполенные в POP_IMM
+    # а еще лучше - изменять прямо на месте, в памяти
     PUSH_IMM immediate_full
-    ADVANCE_PC
+    ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
@@ -369,7 +350,7 @@ srv_\name:
     BAIL_ON_ERROR
     add     %rax, immediate_full
     PUSH_IMM immediate_full
-    ADVANCE_PC
+    ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
@@ -390,7 +371,7 @@ srv_\name:
     xchg    %rdx, immediate_full
     pop     %rdx
     PUSH_IMM immediate_full
-    ADVANCE_PC
+    ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
@@ -403,7 +384,7 @@ sz_divide_zero:
     RTN Jump
     movsx   immediate, immediate_full
     add     immediate_full, pc
-    ADVANCE_PC
+    ADVANCE_PC 2
     FETCH_DECODE
     DISPATCH
 
@@ -415,14 +396,13 @@ sz_divide_zero:
     jne     1f
     add     immediate_full, pc
 1:
-    ADVANCE_PC
+    ADVANCE_PC 2
     FETCH_DECODE
     DISPATCH
 
 
     RTN Print
     # Требуется сохранить
-    # opcode_len
     # steps
     # state
     # steplimit
@@ -456,7 +436,7 @@ sz_divide_zero:
     pop     %rsi
     pop     %rdi
 
-    ADVANCE_PC
+    ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
@@ -492,7 +472,6 @@ asm_main:
     xor     pc, pc
     xor     opcode_full, opcode_full
     xor     immediate_full, immediate_full
-    xor     opcode_len, opcode_len
     xor     zero, zero
     xor     one, one
     inc     one
@@ -570,7 +549,7 @@ copy_loop:
     vars old_rsp
 
     gvars ret_steps ret_state ret_pc ret_sp
-    gvars cnt_LPop cnt_LPush cnt_Print cnt_Je cnt_Mod cnt_Add cnt_Sub cnt_Over cnt_Swap cnt_Dup cnt_Drop cnt_Push cnt_Nop cnt_Halt cnt_Break cnt_Inc cnt_Jump
+    gvars cnt_VM_Pop cnt_VM_Push cnt_LPop cnt_LPush cnt_Print cnt_Je cnt_Mod cnt_Add cnt_Sub cnt_Over cnt_Swap cnt_Dup cnt_Drop cnt_Push cnt_Nop cnt_Halt cnt_Break cnt_Inc cnt_Jump
 
 no_err_msg:
     .asciz "no errors."
