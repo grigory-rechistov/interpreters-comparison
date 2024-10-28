@@ -8,14 +8,14 @@
 
 # По-возможности, старайтесь уклониться от исполнения кода:
 # невыполнение кода занимает меньше всего времени
-.set DBGCNT, 0
+.set DBGCNT, 1
 .set STEPLIMIT_CHECK, 1
 .set MAX_PROGRAM_SIZE_CHECK, 1
 .set STATE_RUNNING_CHECK, 1
 .set STACK_CHECK, 1
 
 .set OPT_ON_SITE, 1
-.set OPT_CACHED, 0
+.set OPT_CACHED, 1
 
 #define Instr_Break   0x0000 /* Abnormal end */
 #define Instr_Nop     0x0001
@@ -333,11 +333,11 @@ srv_\name:
 
 
     RTN Push
-    .if OPT_CACHED
-      PUSH_IMM  subtop
-      movq      top, subtop
+    .if OPT_CACHED == 1
+      PUSH_IMM  top
       movq      immediate_full, top
-    .else
+    .endif
+    .if OPT_CACHED == 0
       PUSH_IMM  immediate_full
     .endif
     ADVANCE_PC 2
@@ -346,10 +346,10 @@ srv_\name:
 
 
     RTN Drop
-    .if OPT_CACHED
-      movq      subtop, top
-      POP_IMM   subtop
-    .else
+    .if OPT_CACHED == 1
+      POP_IMM   top
+    .endif
+    .if OPT_CACHED == 0
       POP_IMM   immediate_full
     .endif
     ADVANCE_PC 1
@@ -359,10 +359,10 @@ srv_\name:
 
     RTN Dup     ## <- NB! Not used
     BAIL_ON_ERROR
-    .if OPT_CACHED
-      PUSH_IMM   subtop
-      movq       top, subtop
-    .else
+    .if OPT_CACHED == 1
+      PUSH_IMM   top
+    .endif
+    .if OPT_CACHED == 0
       POP_IMM immediate_full
       VM_PUSH opcode_full immediate_full immediate_full
     .endif
@@ -372,9 +372,10 @@ srv_\name:
 
 
     RTN Swap
-    .if OPT_CACHED
-      xchg   top, subtop
-    .else
+    .if OPT_CACHED == 1
+      xchg   top, (sp)
+    .endif
+    .if OPT_CACHED == 0
       VM_POP opcode_full immediate_full %rax
       BAIL_ON_ERROR
       VM_PUSH opcode_full immediate_full %rax
@@ -385,10 +386,11 @@ srv_\name:
 
 
     RTN Over
-    .if OPT_CACHED
-      PUSH_IMM  subtop
-      xchg      top, subtop
-    .else
+    .if OPT_CACHED == 1
+      PUSH_IMM  top
+      movq  8(sp), top
+    .endif
+    .if OPT_CACHED == 0
       .if OPT_ON_SITE
         movq       8(sp), %rax
         PUSH_IMM   %rax
@@ -407,10 +409,11 @@ srv_\name:
 
 
     RTN Sub
-    .if OPT_CACHED
-      sub        subtop, top
-      POP_IMM    subtop
-    .else
+    .if OPT_CACHED == 1
+      POP_IMM    opcode_full
+      subq       opcode_full, top
+    .endif
+    .if OPT_CACHED == 0
       .if OPT_ON_SITE
         POP_IMM  immediate_full
         subq     immediate_full, (sp)
@@ -426,9 +429,10 @@ srv_\name:
 
 
     RTN Inc
-    .if OPT_CACHED
+    .if OPT_CACHED == 1
       inc   top
-    .else
+    .endif
+    .if OPT_CACHED == 0
       .if OPT_ON_SITE
         incq    (sp)
       .else
@@ -446,17 +450,18 @@ srv_\name:
 
 
     RTN Mod
-    .if OPT_CACHED
-      movq  top, %rax
+    .if OPT_CACHED == 1
+      movq    top, %rax
       BAIL_ON_ERROR
-      test    subtop, subtop
+      POP_IMM immediate_full
+      test    immediate_full, immediate_full
       je      handle_divide_zero
       # Деление
       xor     %rdx, %rdx          # rdx = opcode_full
-      div     subtop              # rdx:rax / operand -> rax, rdx
+      div     immediate_full      # rdx:rax / operand -> rax, rdx
       movq    %rdx, top
-      POP_IMM subtop
-    .else
+    .endif
+    .if OPT_CACHED == 0
       VM_POP opcode_full %rax immediate_full
       BAIL_ON_ERROR
       test    immediate_full, immediate_full
@@ -490,12 +495,13 @@ sz_divide_zero:
 
 
     RTN Je
-    .if OPT_CACHED
-      movq  top, %rax
-      POP_IMM subtop
+    .if OPT_CACHED == 1
+      movq    top, %rax
+      POP_IMM top
       BAIL_ON_ERROR
       test    %rax, %rax
-    .else
+    .endif
+    .if OPT_CACHED == 0
       POP_IMM %rax
       BAIL_ON_ERROR
       test    %rax, %rax
@@ -509,9 +515,11 @@ sz_divide_zero:
 
 
     RTN Print
-    .if OPT_CACHED
-      POP_IMM subtop
-    .else
+    .if OPT_CACHED == 1
+      movq  top, %rax
+      POP_IMM top
+    .endif
+    .if OPT_CACHED == 0
       POP_IMM %rax
     .endif
     BAIL_ON_ERROR
@@ -525,11 +533,7 @@ sz_divide_zero:
     push    %r10
     push    %r11
     lea     sz_fmt_str(%rip), %rdi
-    .if OPT_CACHED
-      movq    top, %rsi # top = %r13
-    .else
-      movq     %rax, %rsi
-    .endif
+    movq     %rax, %rsi
     xor     %rax, %rax
     call    printf
     pop     %r11
