@@ -421,7 +421,6 @@ extern void srv_Swap(cpu_t *pcpu, decode_t *pdecoded);
 extern void srv_Over(cpu_t *pcpu, decode_t *pdecoded);
 extern void srv_Sub(cpu_t *pcpu, decode_t *pdecoded);
 extern void srv_Inc(cpu_t *pcpu, decode_t *pdecoded);
-extern void srv_Add(cpu_t *pcpu, decode_t *pdecoded);
 extern void srv_Mod(cpu_t *pcpu, decode_t *pdecoded);
 extern void srv_Jump(cpu_t *pcpu, decode_t *pdecoded);
 extern void srv_Je(cpu_t *pcpu, decode_t *pdecoded);
@@ -430,7 +429,7 @@ extern void srv_Print(cpu_t *pcpu, decode_t *pdecoded);
 service_routine_t service_routines[] = {
         &srv_Break, &srv_Nop, &srv_Halt, &srv_Push, &srv_Print,
         &sr_Jne, &srv_Swap, &srv_Dup, &srv_Je, &srv_Inc,
-        &srv_Add, &srv_Sub, &sr_Mul, &sr_Rand, &sr_Dec,
+        &sr_Add, &srv_Sub, &sr_Mul, &sr_Rand, &sr_Dec,
         &srv_Drop, &srv_Over, &srv_Mod, &srv_Jump,
         &sr_And, &sr_Or, &sr_Xor,
         &sr_SHL, &sr_SHR,
@@ -449,7 +448,6 @@ extern uint64_t cnt_LPop;
 extern uint64_t cnt_Print;
 extern uint64_t cnt_Je;
 extern uint64_t cnt_Mod;
-extern uint64_t cnt_Add;
 extern uint64_t cnt_Sub;
 extern uint64_t cnt_Over;
 extern uint64_t cnt_Swap;
@@ -489,8 +487,8 @@ int main(int argc, char **argv) {
                        ret_state == Cpu_Running? "Running": "Break");
     printf("PC = %lu, SP = %lu\n", ret_pc, ret_sp);
     printf("Errors: %s\n", ret_err_ptr);
-    printf("Counters     :\n cnt_VM_Push : %20lu\n cnt_VM_Pop  : %20lu\n cnt_LPush   : %20lu\n cnt_LPop    : %20lu\n cnt_Print   : %20lu\n cnt_Je      : %20lu\n cnt_Mod     : %20lu\n cnt_Add     : %20lu\n cnt_Sub     : %20lu\n cnt_Over    : %20lu\n cnt_Swap    : %20lu\n cnt_Dup     : %20lu\n cnt_Drop    : %20lu\n cnt_Push    : %20lu\n cnt_Nop     : %20lu\n cnt_Halt    : %20lu\n cnt_Break   : %20lu\n cnt_Inc     : %20lu\n cnt_Jump    : %20lu\n",
-           cnt_VM_Push, cnt_VM_Pop, cnt_LPush, cnt_LPop, cnt_Print, cnt_Je, cnt_Mod, cnt_Add, cnt_Sub, cnt_Over, cnt_Swap, cnt_Dup, cnt_Drop, cnt_Push, cnt_Nop, cnt_Halt, cnt_Break, cnt_Inc, cnt_Jump);
+    printf("Counters     :\n cnt_VM_Push : %20lu\n cnt_VM_Pop  : %20lu\n cnt_LPush   : %20lu\n cnt_LPop    : %20lu\n cnt_Print   : %20lu\n cnt_Je      : %20lu\n cnt_Mod     : %20lu\n cnt_Sub     : %20lu\n cnt_Over    : %20lu\n cnt_Swap    : %20lu\n cnt_Dup     : %20lu\n cnt_Drop    : %20lu\n cnt_Push    : %20lu\n cnt_Nop     : %20lu\n cnt_Halt    : %20lu\n cnt_Break   : %20lu\n cnt_Inc     : %20lu\n cnt_Jump    : %20lu\n",
+           cnt_VM_Push, cnt_VM_Pop, cnt_LPush, cnt_LPop, cnt_Print, cnt_Je, cnt_Mod, cnt_Sub, cnt_Over, cnt_Swap, cnt_Dup, cnt_Drop, cnt_Push, cnt_Nop, cnt_Halt, cnt_Break, cnt_Inc, cnt_Jump);
     printf("Stack (%ld): \n", ret_sp);
     for (uint64_t i=0; i < ret_sp ; i++) {
         printf("%2lu : %20lu : %20d\n",

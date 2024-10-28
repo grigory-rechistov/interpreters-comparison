@@ -9,12 +9,13 @@
 # По-возможности, старайтесь уклониться от исполнения кода:
 # невыполнение кода занимает меньше всего времени
 .set DBGCNT, 0
-.set STEPLIMIT_CHECK, 0
-.set MAX_PROGRAM_SIZE_CHECK, 0
-.set STATE_RUNNING_CHECK, 0
+.set STEPLIMIT_CHECK, 1
+.set MAX_PROGRAM_SIZE_CHECK, 1
+.set STATE_RUNNING_CHECK, 1
 .set STACK_CHECK, 1
 
 .set OPT_ON_SITE, 1
+.set OPT_CACHED, 0
 
 #define Instr_Break   0x0000 /* Abnormal end */
 #define Instr_Nop     0x0001
@@ -45,14 +46,14 @@
 #define Instr_Pick    0x001a
 
 # CPU_T
-#define routines        %rdi    #
-#define prog_mem        %rsi    #
-#define steplimit       %rcx    #
-#define steps           %r8     #
-#define pc              %r9     #
-#define stack_max       %rbp    #
-#define stack_min       %rbx    #
-#define sp              %rsp    #
+#define routines        %rdi
+#define prog_mem        %rsi
+#define steplimit       %rcx
+#define steps           %r8
+#define pc              %r9
+#define stack_max       %rbp
+#define stack_min       %rbx
+#define sp              %rsp
 
 #define top             %r13
 # 0 = Cpu_Running
@@ -63,11 +64,11 @@
 #define two             %r12
 
 # DECODE_T
-#define opcode          %edx    #
-#define opcode_full     %rdx    #
-#define immediate       %r14d   #
-#define immediate_full  %r14    #
-#define state           %r15    #
+#define opcode          %edx
+#define opcode_full     %rdx
+#define immediate       %r14d
+#define immediate_full  %r14
+#define state           %r15
 
 
 .section .text
@@ -191,6 +192,7 @@ sz_steplimit_reached:
 
 
 .macro PUSH_IMM reg
+PUSH_IMM_\@:
     .if DBGCNT
     incq    cnt_LPush(%rip)
     .endif
@@ -244,6 +246,7 @@ sz_stack_overflow:
 
 
 .macro POP_IMM reg
+POP_IMM_\@:
     .if DBGCNT
     incq    cnt_LPop(%rip)
     .endif
@@ -308,71 +311,95 @@ srv_\name:
 .endm
 
 
-    RTN Break   ## ;; <- NB! Not used
-    /* No need to dispatch after Break */
+    RTN Break   ## <- NB! Not used
+    # No need to dispatch after Break
     mov     two, state
     xor     %eax, %eax
     jmp     save_rets_and_exit
 
 
     RTN Halt
-    /* No need to dispatch after Halt */
+    # No need to dispatch after Halt
     mov     one, state
     xor     %eax, %eax
     jmp     save_rets_and_exit
 
 
-
-    RTN Nop     ## ;; <- NB! Not used
-    /* Do nothing */
+    RTN Nop     ## <- NB! Not used
+    # Do nothing
     ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
 
     RTN Push
-    PUSH_IMM immediate_full
+    .if OPT_CACHED
+      PUSH_IMM  subtop
+      movq      top, subtop
+      movq      immediate_full, top
+    .else
+      PUSH_IMM  immediate_full
+    .endif
     ADVANCE_PC 2
     FETCH_DECODE
     DISPATCH
 
 
     RTN Drop
-    POP_IMM immediate_full
+    .if OPT_CACHED
+      movq      subtop, top
+      POP_IMM   subtop
+    .else
+      POP_IMM   immediate_full
+    .endif
     ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
 
-    RTN Dup     ## ;; <- NB! Not used
+    RTN Dup     ## <- NB! Not used
     BAIL_ON_ERROR
-    POP_IMM immediate_full
-    VM_PUSH opcode_full immediate_full immediate_full
+    .if OPT_CACHED
+      PUSH_IMM   subtop
+      movq       top, subtop
+    .else
+      POP_IMM immediate_full
+      VM_PUSH opcode_full immediate_full immediate_full
+    .endif
     ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
 
     RTN Swap
-    VM_POP opcode_full immediate_full %rax
-    BAIL_ON_ERROR
-    VM_PUSH opcode_full immediate_full %rax
+    .if OPT_CACHED
+      xchg   top, subtop
+    .else
+      VM_POP opcode_full immediate_full %rax
+      BAIL_ON_ERROR
+      VM_PUSH opcode_full immediate_full %rax
+    .endif
     ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
 
     RTN Over
-    .if OPT_ON_SITE
-     movq       8(sp), %rax
-     PUSH_IMM   %rax
+    .if OPT_CACHED
+      PUSH_IMM  subtop
+      xchg      top, subtop
     .else
-     # мы можем использовать opcode_full как tmpreg, так как
-     # после FETCH он не используется и будет перезаписан
-     # в следующем FETCH
-     VM_POP opcode_full immediate_full %rax
-     BAIL_ON_ERROR
-     VM_PUSH opcode_full %rax immediate_full %rax
+      .if OPT_ON_SITE
+        movq       8(sp), %rax
+        PUSH_IMM   %rax
+      .else
+        # мы можем использовать opcode_full как tmpreg, так как
+        # после FETCH он не используется и будет перезаписан
+        # в следующем FETCH
+        VM_POP opcode_full immediate_full %rax
+        BAIL_ON_ERROR
+        VM_PUSH opcode_full %rax immediate_full %rax
+      .endif
     .endif
     ADVANCE_PC 1
     FETCH_DECODE
@@ -380,13 +407,18 @@ srv_\name:
 
 
     RTN Sub
-    .if OPT_ON_SITE
-     POP_IMM  immediate_full
-     subq     immediate_full, (sp)
+    .if OPT_CACHED
+      sub        subtop, top
+      POP_IMM    subtop
     .else
-     VM_POP   opcode_full immediate_full %rax
-     sub      %rax, immediate_full
-     PUSH_IMM immediate_full
+      .if OPT_ON_SITE
+        POP_IMM  immediate_full
+        subq     immediate_full, (sp)
+      .else
+        VM_POP   opcode_full immediate_full %rax
+        sub      %rax, immediate_full
+        PUSH_IMM immediate_full
+      .endif
     .endif
     ADVANCE_PC 1
     FETCH_DECODE
@@ -394,41 +426,46 @@ srv_\name:
 
 
     RTN Inc
-    .if OPT_ON_SITE
-     incq    (sp)
+    .if OPT_CACHED
+      inc   top
     .else
-     POP_IMM immediate_full
-     BAIL_ON_ERROR
-     inc     immediate_full
-     # Тут можно оптимизировать проверки, уже выполненные в POP_IMM
-     # а еще лучше - изменять прямо на месте, в памяти
-     PUSH_IMM immediate_full
+      .if OPT_ON_SITE
+        incq    (sp)
+      .else
+        POP_IMM immediate_full
+        BAIL_ON_ERROR
+        inc     immediate_full
+        # Тут можно оптимизировать проверки, уже выполненные в POP_IMM
+        # а еще лучше - изменять прямо на месте, в памяти
+        PUSH_IMM immediate_full
+      .endif
     .endif
     ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
 
 
-    RTN Add     ## ;; <- NB! Not used
-    POP_IMM immediate_full
-    POP_IMM %rax
-    BAIL_ON_ERROR
-    add     %rax, immediate_full
-    PUSH_IMM immediate_full
-    ADVANCE_PC 1
-    FETCH_DECODE
-    DISPATCH
-
-
     RTN Mod
-    VM_POP opcode_full %rax immediate_full
-    BAIL_ON_ERROR
-    test    immediate_full, immediate_full
-    je      handle_divide_zero
-    # Деление
-    xor     %rdx, %rdx          # rdx = opcode_full
-    div     immediate_full      # rdx:rax -> rax, rdx
-    PUSH_IMM %rdx
+    .if OPT_CACHED
+      movq  top, %rax
+      BAIL_ON_ERROR
+      test    subtop, subtop
+      je      handle_divide_zero
+      # Деление
+      xor     %rdx, %rdx          # rdx = opcode_full
+      div     subtop              # rdx:rax / operand -> rax, rdx
+      movq    %rdx, top
+      POP_IMM subtop
+    .else
+      VM_POP opcode_full %rax immediate_full
+      BAIL_ON_ERROR
+      test    immediate_full, immediate_full
+      je      handle_divide_zero
+      # Деление
+      xor     %rdx, %rdx          # rdx = opcode_full
+      div     immediate_full      # rdx:rax / operand  -> rax, rdx
+      PUSH_IMM %rdx
+    .endif
     ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
@@ -453,9 +490,16 @@ sz_divide_zero:
 
 
     RTN Je
-    POP_IMM %rax
-    BAIL_ON_ERROR
-    test    %rax, %rax
+    .if OPT_CACHED
+      movq  top, %rax
+      POP_IMM subtop
+      BAIL_ON_ERROR
+      test    %rax, %rax
+    .else
+      POP_IMM %rax
+      BAIL_ON_ERROR
+      test    %rax, %rax
+    .endif
     jne     1f
     add     immediate_full, pc
 1:
@@ -465,7 +509,11 @@ sz_divide_zero:
 
 
     RTN Print
-    POP_IMM %rax
+    .if OPT_CACHED
+      POP_IMM subtop
+    .else
+      POP_IMM %rax
+    .endif
     BAIL_ON_ERROR
 
     push    %rdi
@@ -477,7 +525,11 @@ sz_divide_zero:
     push    %r10
     push    %r11
     lea     sz_fmt_str(%rip), %rdi
-    mov     %rax, %rsi
+    .if OPT_CACHED
+      movq    top, %rsi # top = %r13
+    .else
+      movq     %rax, %rsi
+    .endif
     xor     %rax, %rax
     call    printf
     pop     %r11
@@ -528,7 +580,8 @@ asm_main:
     xor     pc, pc
     xor     opcode_full, opcode_full
     xor     immediate_full, immediate_full
-    xor     zero, zero
+    xor     top, top
+    xor     subtop, subtop
     xor     one, one
     inc     one
     mov     one, two
@@ -607,7 +660,7 @@ copy_loop:
     vars old_rsp
 
     gvars ret_steps ret_state ret_pc ret_sp
-    gvars cnt_VM_Pop cnt_VM_Push cnt_LPop cnt_LPush cnt_Print cnt_Je cnt_Mod cnt_Add cnt_Sub cnt_Over cnt_Swap cnt_Dup cnt_Drop cnt_Push cnt_Nop cnt_Halt cnt_Break cnt_Inc cnt_Jump
+    gvars cnt_VM_Pop cnt_VM_Push cnt_LPop cnt_LPush cnt_Print cnt_Je cnt_Mod cnt_Sub cnt_Over cnt_Swap cnt_Dup cnt_Drop cnt_Push cnt_Nop cnt_Halt cnt_Break cnt_Inc cnt_Jump
 
 no_err_msg:
     .asciz "no errors."
