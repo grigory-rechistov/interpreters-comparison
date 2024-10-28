@@ -57,11 +57,14 @@ tailrecursive: tailrecursive.o
 	$(CC) $^ -lm -o $@
 
 asmoptll: asmoptll.o
-	$(CC) -g -c $< -o $@
+	$(CC) -g -pg -c $< -o $@
 
 asmopt: CFLAGS += -foptimize-sibling-calls
 asmopt: asmoptll.o asmopt.o
-	$(CC) -g $^ -lm -o $@
+	$(CC) -g -pg $^ -lm -o $@
+
+prof:
+	gprof -b asmopt gmon.out
 
 threaded-cached: CFLAGS += -fno-gcse -fno-thread-jumps -fno-cse-follow-jumps -fno-crossjumping -fno-cse-skip-blocks -fomit-frame-pointer
 threaded-cached: threaded-cached.o
