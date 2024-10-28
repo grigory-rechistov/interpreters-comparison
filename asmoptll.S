@@ -9,13 +9,20 @@
 # По-возможности, старайтесь уклониться от исполнения кода:
 # невыполнение кода занимает меньше всего времени
 .set DBGCNT, 1
-.set STEPLIMIT_CHECK, 1
-.set MAX_PROGRAM_SIZE_CHECK, 1
-.set STATE_RUNNING_CHECK, 1
-.set STACK_CHECK, 1
+.set STEPCNT, 1
+.set STEPLIMIT_CHECK, 0
+.set MAX_PROGRAM_SIZE_CHECK, 0
+.set STATE_RUNNING_CHECK, 0
+.set STACK_CHECK, 0
 
-.set OPT_ON_SITE, 1
-.set OPT_CACHED, 1
+# Оптимизации
+.set OPT_CACHED, 0
+.set OPT_ON_SITE, 0 # 6.796s
+.set OPT_ON_SITE, 1 # 5.219s
+
+.set OPT_CACHED, 1  # 15.814s
+.set OPT_CACHED, 2  # 4.581s
+
 
 #define Instr_Break   0x0000 /* Abnormal end */
 #define Instr_Nop     0x0001
@@ -129,8 +136,8 @@ DECODE_\@:
 
 .if STATE_RUNNING_CHECK
 handle_state_is_not_running:
-    lea     sz_state_is_not_running(%rip), %rax
     mov     two, state # Cpu_Break
+    lea     sz_state_is_not_running(%rip), %rax
     jmp     save_rets_and_exit
 .endif
 
@@ -147,7 +154,7 @@ ADVANCE_PC_\@:
     inc    pc
     .endr
 
-    .if STEPLIMIT_CHECK
+    .if (STEPLIMIT_CHECK || STEPCNT)
     # Аксакалы верят что если разнести инкремент и проверку, то
     # это позволит процессору заняться в промежутке чем-то еще
     inc     steps
@@ -179,6 +186,7 @@ handle_steplimit_reached:
 .if (STATE_RUNNING_CHECK || STEPLIMIT_CHECK)
 set_state_break:
     mov     two, state # Cpu_Break
+    lea     sz_system_break(%rip), %rax
     jmp     save_rets_and_exit
 .endif
 
@@ -207,8 +215,8 @@ PUSH_IMM_\@:
 
 .if STACK_CHECK
 handle_overflow:
-    lea     sz_stack_overflow(%rip), %rax
     mov     two, state # Cpu_Break
+    lea     sz_stack_overflow(%rip), %rax
     jmp     save_rets_and_exit
 
     .section .data
@@ -261,8 +269,8 @@ POP_IMM_\@:
 
 .if STACK_CHECK
 handle_underflow:
-    lea     sz_stack_underflow(%rip), %rax
     mov     two, state # Cpu_Break
+    lea     sz_stack_underflow(%rip), %rax
     jmp     save_rets_and_exit
 
     .section .data
@@ -314,14 +322,14 @@ srv_\name:
     RTN Break   ## <- NB! Not used
     # No need to dispatch after Break
     mov     two, state
-    xor     %eax, %eax
+    lea     sz_system_break(%rip), %rax
     jmp     save_rets_and_exit
 
 
     RTN Halt
     # No need to dispatch after Halt
     mov     one, state
-    xor     %eax, %eax
+    lea     sz_system_halted(%rip), %rax
     jmp     save_rets_and_exit
 
 
@@ -333,6 +341,11 @@ srv_\name:
 
 
     RTN Push
+    .if OPT_CACHED == 2
+      PUSH_IMM  subtop
+      movq      top, subtop
+      movq      immediate_full, top
+    .endif
     .if OPT_CACHED == 1
       PUSH_IMM  top
       movq      immediate_full, top
@@ -346,6 +359,10 @@ srv_\name:
 
 
     RTN Drop
+    .if OPT_CACHED == 2
+      movq      subtop, top
+      POP_IMM   subtop
+    .endif
     .if OPT_CACHED == 1
       POP_IMM   top
     .endif
@@ -358,13 +375,26 @@ srv_\name:
 
 
     RTN Dup     ## <- NB! Not used
-    BAIL_ON_ERROR
+    .if OPT_CACHED == 2
+      PUSH_IMM  subtop
+      movq      top, subtop
+    .endif
     .if OPT_CACHED == 1
       PUSH_IMM   top
+      BAIL_ON_ERROR
     .endif
     .if OPT_CACHED == 0
-      POP_IMM immediate_full
-      VM_PUSH opcode_full immediate_full immediate_full
+      .if OPT_ON_SITE
+        # Возможно этот способ медленее, чем вариант
+        # из else, но т.к. эта RTN не используется
+        # то это никак не проверить - пусть будет так
+        mov (sp), immediate_full
+        PUSH_IMM immediate_full
+      .else
+        POP_IMM immediate_full
+        BAIL_ON_ERROR
+        VM_PUSH opcode_full immediate_full immediate_full
+      .endif
     .endif
     ADVANCE_PC 1
     FETCH_DECODE
@@ -372,13 +402,28 @@ srv_\name:
 
 
     RTN Swap
+    .if OPT_CACHED == 2
+      xchg   top, subtop
+    .endif
     .if OPT_CACHED == 1
       xchg   top, (sp)
     .endif
     .if OPT_CACHED == 0
-      VM_POP opcode_full immediate_full %rax
-      BAIL_ON_ERROR
-      VM_PUSH opcode_full immediate_full %rax
+      .if OPT_ON_SITE
+        # Этот способ серьезно замедляет работу поэтому
+        # он закомментирован, и вместо него сюда
+        # скопирован и используется вариант из else
+        # mov     (sp), %rax
+        # xchg    8(sp), %rax
+        # xchg    (sp), %rax
+        VM_POP opcode_full immediate_full %rax
+        BAIL_ON_ERROR
+        VM_PUSH opcode_full immediate_full %rax
+      .else
+        VM_POP opcode_full immediate_full %rax
+        BAIL_ON_ERROR
+        VM_PUSH opcode_full immediate_full %rax
+      .endif
     .endif
     ADVANCE_PC 1
     FETCH_DECODE
@@ -386,6 +431,10 @@ srv_\name:
 
 
     RTN Over
+    .if OPT_CACHED == 2
+      xchg  top, subtop
+      PUSH_IMM  top
+    .endif
     .if OPT_CACHED == 1
       PUSH_IMM  top
       movq  8(sp), top
@@ -409,6 +458,10 @@ srv_\name:
 
 
     RTN Sub
+    .if OPT_CACHED == 2
+      subq      subtop, top
+      POP_IMM   subtop
+    .endif
     .if OPT_CACHED == 1
       POP_IMM    opcode_full
       subq       opcode_full, top
@@ -429,6 +482,9 @@ srv_\name:
 
 
     RTN Inc
+    .if OPT_CACHED == 2
+      inc   top
+    .endif
     .if OPT_CACHED == 1
       inc   top
     .endif
@@ -450,6 +506,17 @@ srv_\name:
 
 
     RTN Mod
+    .if OPT_CACHED == 2
+      movq    top, %rax
+      BAIL_ON_ERROR
+      test    subtop, subtop
+      je      handle_divide_zero
+      # Деление
+      xor     %rdx, %rdx          # rdx = opcode_full
+      div     subtop            # rdx:rax / operand -> rax, rdx
+      movq    %rdx, top
+      POP_IMM subtop
+    .endif
     .if OPT_CACHED == 1
       movq    top, %rax
       BAIL_ON_ERROR
@@ -477,7 +544,7 @@ srv_\name:
 
 handle_divide_zero:
     mov     two, state
-    mov     sz_divide_zero(%rip), %eax
+    lea     sz_divide_zero(%rip), %rax
     jmp     save_rets_and_exit
 
     .section .data
@@ -495,26 +562,62 @@ sz_divide_zero:
 
 
     RTN Je
+
+    .if OPT_CACHED == 2
+      movq    top, %rax
+      movq    subtop, top
+      POP_IMM subtop
+      BAIL_ON_ERROR
+      test    %rax, %rax
+      je      3f
+      ADVANCE_PC 2
+      FETCH_DECODE
+      DISPATCH
+3:
+      add     immediate_full, pc
+      ADVANCE_PC 2
+      FETCH_DECODE
+      DISPATCH
+    .endif
+
     .if OPT_CACHED == 1
       movq    top, %rax
       POP_IMM top
       BAIL_ON_ERROR
       test    %rax, %rax
+      je      2f
+      ADVANCE_PC 2
+      FETCH_DECODE
+      DISPATCH
+2:
+      add     immediate_full, pc
+      ADVANCE_PC 2
+      FETCH_DECODE
+      DISPATCH
     .endif
+
     .if OPT_CACHED == 0
       POP_IMM %rax
       BAIL_ON_ERROR
       test    %rax, %rax
-    .endif
-    jne     1f
-    add     immediate_full, pc
+      je      1f
+      ADVANCE_PC 2
+      FETCH_DECODE
+      DISPATCH
 1:
-    ADVANCE_PC 2
-    FETCH_DECODE
-    DISPATCH
+      add     immediate_full, pc
+      ADVANCE_PC 2
+      FETCH_DECODE
+      DISPATCH
+    .endif
 
 
     RTN Print
+    .if OPT_CACHED == 2
+      movq  top, %rax
+      movq    subtop, top
+      POP_IMM subtop
+    .endif
     .if OPT_CACHED == 1
       movq  top, %rax
       POP_IMM top
@@ -523,7 +626,6 @@ sz_divide_zero:
       POP_IMM %rax
     .endif
     BAIL_ON_ERROR
-
     push    %rdi
     push    %rsi
     push    %rcx
@@ -533,8 +635,9 @@ sz_divide_zero:
     push    %r10
     push    %r11
     lea     sz_fmt_str(%rip), %rdi
-    movq     %rax, %rsi
+    movq    %rax, %rsi
     xor     %rax, %rax
+test:
     call    printf
     pop     %r11
     pop     %r10
@@ -549,16 +652,18 @@ sz_divide_zero:
     FETCH_DECODE
     DISPATCH
 
+
     .section .data
 sz_fmt_str:
     .asciz "[%d]\n"
-    .section .text
-
+    .quad 0
 
 
 
 #### MAIN ####
 
+
+    .section .text
 
     .global asm_main
     .type asm_main, @function
@@ -602,7 +707,7 @@ save_rets_and_exit: # <----
     jz      1f
     mov     %rax, ret_err_ptr(%rip)
 1:
-    .if STEPLIMIT_CHECK
+    .if (STEPLIMIT_CHECK || STEPCNT)
     movq    steps, ret_steps(%rip)
     .endif
     movq    state, ret_state(%rip)
@@ -665,6 +770,12 @@ copy_loop:
 
     gvars ret_steps ret_state ret_pc ret_sp
     gvars cnt_VM_Pop cnt_VM_Push cnt_LPop cnt_LPush cnt_Print cnt_Je cnt_Mod cnt_Sub cnt_Over cnt_Swap cnt_Dup cnt_Drop cnt_Push cnt_Nop cnt_Halt cnt_Break cnt_Inc cnt_Jump
+
+sz_system_break:
+    .asciz "system break."
+
+sz_system_halted:
+    .asciz "system halted."
 
 no_err_msg:
     .asciz "no errors."
