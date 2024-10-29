@@ -19,8 +19,8 @@
 .set OPT_ON_SITE, 0 # 3.590s
 .set OPT_ON_SITE, 1 # 3.298s
 
-.set OPT_CACHED, 1  # 11.961s
-#.set OPT_CACHED, 2  # 2.847s
+.set OPT_CACHED, 1  # 3.004s
+.set OPT_CACHED, 2  # 2.847s
 
 # Инструкции
 #define Instr_Break   0x0000 /* Abnormal end */
@@ -70,10 +70,10 @@
 #define two             %r12
 
 # DECODE_T
-#define opcode          %edx
-#define opcode_full     %rdx
-#define immediate       %r14d
-#define immediate_full  %r14
+#define opcode32        %edx
+#define opcode64        %rdx
+#define immed32         %r14d
+#define immed64         %r14
 #define state           %r15
 
 # ACCUMULATOR
@@ -82,27 +82,22 @@
 
 .section .text
 .macro FETCH_DECODE
-# FETCH_DECODE_\@:
     FETCH_CHECKED
     DECODE
 .endm
 
-
-    # (PC > 512) then error, exit
-    # RET: opcode
 .macro FETCH_CHECKED
-# FETCH_CHECKED_\@:
     .if MAX_PROGRAM_SIZE_CHECK
-    movq    $512, opcode_full   # (opcode_full := max_program_size)
-    cmp     pc, opcode_full
+    movq    $512, opcode64   # (opcode64 := max_program_size)
+    cmp     pc, opcode64
     jb      handle_pc_out_of_bound  # (pc > max_program_size)
     .endif
     FETCH
 .endm
 
 handle_pc_out_of_bound:
-    movq    two, state                 # = 2 (Cpu_Break)
-    xor     opcode_full, opcode_full   # = 0 (Instr_Break)
+    movq    two, state           # = 2 (Cpu_Break)
+    xor     opcode64, opcode64   # = 0 (Instr_Break)
     lea     sz_pc_out_of_bound(%rip), acc
     jmp     save_rets_and_exit
 
@@ -111,20 +106,12 @@ sz_pc_out_of_bound:
     .asciz "PC out of bounds"
     .section .text
 
-
-
-    # RET: opcode
 .macro FETCH
-# FETCH_\@:
-    mov     (prog_mem, pc, 4), opcode
+    mov     (prog_mem, pc, 4), opcode32     # prog_mem[pc]
 .endm
 
-
-    # IN: opcode (от FETCH, который всегда предшествует)
-    # RET: immediate
 .macro DECODE
-# DECODE_\@:
-    mov     4(prog_mem, pc, 4), immediate   # prog_mem[pc+1]
+    mov     4(prog_mem, pc, 4), immed32     # prog_mem[pc+1]
 .endm
 
 
@@ -146,7 +133,7 @@ handle_state_is_not_running:
 
 .macro DISPATCH
 # DISPATCH_\@:
-    jmp     *(routines, opcode_full, 8)
+    jmp     *(routines, opcode64, 8)
 .endm
 
 
@@ -348,14 +335,14 @@ srv_\name:
     .if OPT_CACHED == 2
       PUSH_IMM  subtop
       movq      top, subtop
-      movq      immediate_full, top
+      movq      immed64, top
     .endif
     .if OPT_CACHED == 1
       PUSH_IMM  top
-      movq      immediate_full, top
+      movq      immed64, top
     .endif
     .if OPT_CACHED == 0
-      PUSH_IMM  immediate_full
+      PUSH_IMM  immed64
     .endif
     ADVANCE_PC 2
     FETCH_DECODE
@@ -371,7 +358,7 @@ srv_\name:
       POP_IMM   top
     .endif
     .if OPT_CACHED == 0
-      POP_IMM   immediate_full
+      POP_IMM   immed64
     .endif
     ADVANCE_PC 1
     FETCH_DECODE
@@ -392,12 +379,12 @@ srv_\name:
         # Возможно этот способ медленее, чем вариант
         # из else, но т.к. эта RTN не используется,
         # то это никак не проверить - пусть будет так
-        mov (sp), immediate_full
-        PUSH_IMM immediate_full
+        mov (sp), immed64
+        PUSH_IMM immed64
       .else
-        POP_IMM immediate_full
+        POP_IMM immed64
         BAIL_ON_ERROR
-        VM_PUSH opcode_full immediate_full immediate_full
+        VM_PUSH opcode64 immed64 immed64
       .endif
     .endif
     ADVANCE_PC 1
@@ -411,9 +398,9 @@ srv_\name:
     .endif
     .if OPT_CACHED == 1
       #xchg   top, (sp)
-      pop   opcode_full
-      xchg  opcode_full, top
-      push  opcode_full
+      POP_IMM   opcode64
+      xchg  opcode64, top
+      push  opcode64
     .endif
     .if OPT_CACHED == 0
       .if OPT_ON_SITE == 1
@@ -423,13 +410,13 @@ srv_\name:
         # mov     (sp), acc
         # xchg    8(sp), acc
         # xchg    (sp), acc
-        VM_POP opcode_full immediate_full acc
+        VM_POP opcode64 immed64 acc
         BAIL_ON_ERROR
-        VM_PUSH opcode_full immediate_full acc
+        VM_PUSH opcode64 immed64 acc
       .else
-        VM_POP opcode_full immediate_full acc
+        VM_POP opcode64 immed64 acc
         BAIL_ON_ERROR
-        VM_PUSH opcode_full immediate_full acc
+        VM_PUSH opcode64 immed64 acc
       .endif
     .endif
     ADVANCE_PC 1
@@ -451,12 +438,12 @@ srv_\name:
          movq       8(sp), acc
          PUSH_IMM   acc
       .else
-        # мы можем использовать opcode_full как tmpreg, так как
+        # мы можем использовать opcode64 как tmpreg, так как
         # после FETCH он не используется и будет перезаписан
         # в следующем FETCH
-        VM_POP opcode_full immediate_full acc
+        VM_POP opcode64 immed64 acc
         BAIL_ON_ERROR
-        VM_PUSH opcode_full acc immediate_full acc
+        VM_PUSH opcode64 acc immed64 acc
       .endif
     .endif
     ADVANCE_PC 1
@@ -470,17 +457,17 @@ srv_\name:
       POP_IMM   subtop
     .endif
     .if OPT_CACHED == 1
-      POP_IMM    opcode_full
-      subq       opcode_full, top
+      POP_IMM    opcode64
+      subq       opcode64, top
     .endif
     .if OPT_CACHED == 0
       .if OPT_ON_SITE == 1
-        POP_IMM  immediate_full
-        subq     immediate_full, (sp)
+        POP_IMM  immed64
+        subq     immed64, (sp)
       .else
-        VM_POP   opcode_full immediate_full acc
-        sub      acc, immediate_full
-        PUSH_IMM immediate_full
+        VM_POP   opcode64 immed64 acc
+        sub      acc, immed64
+        PUSH_IMM immed64
       .endif
     .endif
     ADVANCE_PC 1
@@ -499,12 +486,12 @@ srv_\name:
       .if OPT_ON_SITE == 1
         incq    (sp)
       .else
-        POP_IMM immediate_full
+        POP_IMM immed64
         BAIL_ON_ERROR
-        inc     immediate_full
+        inc     immed64
         # Тут можно оптимизировать проверки, уже выполненные в POP_IMM
         # а еще лучше - изменять прямо на месте, в памяти
-        PUSH_IMM immediate_full
+        PUSH_IMM immed64
       .endif
     .endif
     ADVANCE_PC 1
@@ -518,7 +505,7 @@ srv_\name:
       # делать mov top, %rax для подготовки к делению
       test    subtop, subtop
       je      handle_divide_zero
-      xor     %rdx, %rdx        # rdx = opcode_full
+      xor     %rdx, %rdx        # rdx = opcode64
       div     subtop            # rdx:rax / operand -> rax, rdx
       movq    %rdx, top
       POP_IMM subtop
@@ -527,22 +514,22 @@ srv_\name:
     .if OPT_CACHED == 1
       # Так как мы для top выбрали RAX то не требуется
       # делать mov top, %rax для подготовки к делению
-      POP_IMM immediate_full
+      POP_IMM immed64
       BAIL_ON_ERROR
-      test    immediate_full, immediate_full
+      test    immed64, immed64
       je      handle_divide_zero
-      xor     %rdx, %rdx          # rdx = opcode_full
-      div     immediate_full      # rdx:rax / operand -> rax, rdx
+      xor     %rdx, %rdx          # rdx = opcode64
+      div     immed64      # rdx:rax / operand -> rax, rdx
       movq    %rdx, top
     .endif
 
     .if OPT_CACHED == 0
-      VM_POP opcode_full %rax immediate_full
+      VM_POP opcode64 %rax immed64
       BAIL_ON_ERROR
-      test    immediate_full, immediate_full
+      test    immed64, immed64
       je      handle_divide_zero
-      xor     %rdx, %rdx          # rdx = opcode_full
-      div     immediate_full      # rdx:rax / operand  -> rax, rdx
+      xor     %rdx, %rdx          # rdx = opcode64
+      div     immed64      # rdx:rax / operand  -> rax, rdx
       PUSH_IMM %rdx
     .endif
     ADVANCE_PC 1
@@ -562,8 +549,8 @@ sz_divide_zero:
 
 
     RTN Jump
-    movsx   immediate, immediate_full
-    add     immediate_full, pc
+    movsx   immed32, immed64
+    add     immed64, pc
     ADVANCE_PC 2
     FETCH_DECODE
     DISPATCH
@@ -582,7 +569,7 @@ sz_divide_zero:
       FETCH_DECODE
       DISPATCH
 3:
-      add     immediate_full, pc
+      add     immed64, pc
       ADVANCE_PC 2
       FETCH_DECODE
       DISPATCH
@@ -598,7 +585,7 @@ sz_divide_zero:
       FETCH_DECODE
       DISPATCH
 2:
-      add     immediate_full, pc
+      add     immed64, pc
       ADVANCE_PC 2
       FETCH_DECODE
       DISPATCH
@@ -613,7 +600,7 @@ sz_divide_zero:
       FETCH_DECODE
       DISPATCH
 1:
-      add     immediate_full, pc
+      add     immed64, pc
       ADVANCE_PC 2
       FETCH_DECODE
       DISPATCH
@@ -695,8 +682,8 @@ asm_main:
     xor     %r15, %r15
     xor     steps, steps
     xor     pc, pc
-    xor     opcode_full, opcode_full
-    xor     immediate_full, immediate_full
+    xor     opcode64, opcode64
+    xor     immed64, immed64
     xor     top, top
     xor     subtop, subtop
     xor     one, one
@@ -730,8 +717,8 @@ save_rets_and_exit: # <----
     lea     ret_stack(%rip), acc
     mov     ret_sp(%rip), %rcx
 copy_loop:
-    popq immediate_full
-    movl immediate, (acc)
+    popq immed64
+    movl immed32, (acc)
     add $8, acc
     loop copy_loop
 
