@@ -1,5 +1,4 @@
 
-# TODO: кеширование верхних элементов стека
 # TODO: самомодифицирующийся код при возвратах и проверках стека
 
     # VRFY: возможно нативный код не имеет инкремента steps
@@ -17,11 +16,11 @@
 
 # Оптимизации
 .set OPT_CACHED, 0
-# .set OPT_ON_SITE, 0 # 6.796s
-# .set OPT_ON_SITE, 1 # 3.070s
+.set OPT_ON_SITE, 0 # 3.590s
+.set OPT_ON_SITE, 1 # 3.298s
 
-.set OPT_CACHED, 1  # 11.978s
-.set OPT_CACHED, 2  # 3.082
+.set OPT_CACHED, 1  # 11.961s
+.set OPT_CACHED, 2  # 2.847s
 
 # Инструкции
 #define Instr_Break   0x0000 /* Abnormal end */
@@ -62,7 +61,7 @@
 #define stack_min       %rbx
 #define sp              %rsp
 
-#define top             %r13
+#define top             %rax
 # 0 = Cpu_Running
 #define subtop          %r10
 # 1 = Cpu_Halted
@@ -78,7 +77,8 @@
 #define state           %r15
 
 # ACCUMULATOR
-# define acc            %rax
+# define acc            %r13
+
 
 .section .text
 .macro FETCH_DECODE
@@ -145,7 +145,7 @@ handle_state_is_not_running:
 
 
 .macro DISPATCH
-DISPATCH_\@:
+# DISPATCH_\@:
     jmp     *(routines, opcode_full, 8)
 .endm
 
@@ -207,12 +207,12 @@ sz_steplimit_reached:
     incq    cnt_LPush(%rip)
     .endif
 
-    push    \reg
-
     .if STACK_CHECK
     cmp     sp, stack_min
     jae     handle_overflow
     .endif
+
+    push    \reg
 .endm
 
 .if STACK_CHECK
@@ -239,11 +239,6 @@ sz_stack_overflow:
      .set num_args, num_args + 1
     .endr
 
-    # push каждого аргумента
-    .irp reg, \args
-     push   \reg
-    .endr
-
     .if STACK_CHECK
     # смещение для LEA
     .set offset, -8 * num_args
@@ -252,6 +247,11 @@ sz_stack_overflow:
     cmp     \tmpreg, stack_min
     jae     handle_overflow
     .endif
+
+    # push каждого аргумента
+    .irp reg, \args
+     push   \reg
+    .endr
 .endm
 
 
@@ -262,12 +262,12 @@ sz_stack_overflow:
     incq    cnt_LPop(%rip)
     .endif
 
-    pop     \reg
-
     .if STACK_CHECK
     cmp     sp, stack_max
     jb      handle_underflow
     .endif
+
+    pop     \reg
 .endm
 
 .if STACK_CHECK
@@ -294,11 +294,6 @@ sz_stack_underflow:
         .set num_args, num_args + 1
     .endr
 
-    # pop каждого аргумента
-    .irp reg, \args
-    pop     \reg
-    .endr
-
     .if STACK_CHECK
     # вычислим смещение для LEA
     .set offset, 8*num_args
@@ -307,6 +302,11 @@ sz_stack_underflow:
     cmp     \tmpreg, stack_max
     jb      handle_underflow
     .endif
+
+    # pop каждого аргумента
+    .irp reg, \args
+    pop     \reg
+    .endr
 .endm
 
 
@@ -511,11 +511,10 @@ srv_\name:
 
     RTN Mod
     .if OPT_CACHED == 2
-      movq    top, acc
-      BAIL_ON_ERROR
+      # Так как мы для top выбрали RAX то не требуется
+      # делать mov top, %rax для подготовки к делению
       test    subtop, subtop
       je      handle_divide_zero
-      # Деление
       xor     %rdx, %rdx        # rdx = opcode_full
       div     subtop            # rdx:rax / operand -> rax, rdx
       movq    %rdx, top
@@ -523,9 +522,10 @@ srv_\name:
     .endif
 
     .if OPT_CACHED == 1
-      movq    top, acc
-      BAIL_ON_ERROR
+      # Так как мы для top выбрали RAX то не требуется
+      # делать mov top, %rax для подготовки к делению
       POP_IMM immediate_full
+      BAIL_ON_ERROR
       test    immediate_full, immediate_full
       je      handle_divide_zero
       xor     %rdx, %rdx          # rdx = opcode_full
@@ -534,7 +534,7 @@ srv_\name:
     .endif
 
     .if OPT_CACHED == 0
-      VM_POP opcode_full acc immediate_full
+      VM_POP opcode_full %rax immediate_full
       BAIL_ON_ERROR
       test    immediate_full, immediate_full
       je      handle_divide_zero
