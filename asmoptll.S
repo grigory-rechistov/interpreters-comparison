@@ -1,13 +1,5 @@
 
-# TODO: самомодифицирующийся код при возвратах и проверках стека
-
-    # VRFY: возможно нативный код не имеет инкремента steps
-    # из ADVANCE_PC, тогда он не вполне корректен с точки зрения
-    # профилированся скорости
-
-# По-возможности, старайтесь уклониться от исполнения кода:
-# невыполнение кода занимает меньше всего времени
-.set DBGCNT, 0
+.set DBGCNT, 1
 .set STEPCNT, 0
 .set STEPLIMIT_CHECK, 0
 .set MAX_PROGRAM_SIZE_CHECK, 0
@@ -88,8 +80,9 @@
 
 .macro FETCH_CHECKED
     .if MAX_PROGRAM_SIZE_CHECK
-    movq    $512, opcode64   # (opcode64 := max_program_size)
-    cmp     pc, opcode64
+    # Место для самомодификации
+    movq    $512, acc
+    cmp     pc, acc
     jb      handle_pc_out_of_bound  # (pc > max_program_size)
     .endif
     FETCH
@@ -107,11 +100,11 @@ sz_pc_out_of_bound:
     .section .text
 
 .macro FETCH
-    mov     (prog_mem, pc, 4), opcode32     # prog_mem[pc]
+    movl    (prog_mem, pc, 4), opcode32     # prog_mem[pc]
 .endm
 
 .macro DECODE
-    mov     4(prog_mem, pc, 4), immed32     # prog_mem[pc+1]
+    movl    4(prog_mem, pc, 4), immed32     # prog_mem[pc+1]
 .endm
 
 
@@ -132,31 +125,31 @@ handle_state_is_not_running:
 
 
 .macro DISPATCH
-# DISPATCH_\@:
     jmp     *(routines, opcode64, 8)
 .endm
 
 
 .macro ADVANCE_PC cnt:req
-# ADVANCE_PC_\@:
-    .rept \cnt
-    inc    pc
-    .endr
+    .if \cnt == 1
+      inc     pc
+    .else
+      lea     \cnt(pc), pc
+    .endif
 
     .if (STEPLIMIT_CHECK || STEPCNT)
-    # Аксакалы верят что если разнести инкремент и проверку, то
-    # это позволит процессору заняться в промежутке чем-то еще
-    inc     steps
+      # Аксакалы верят что если разнести инкремент и проверку, то
+      # это позволит процессору заняться в промежутке чем-то еще
+      inc     steps
     .endif
 
     .if STATE_RUNNING_CHECK
-    test    state, state        # Cpu_Running(0) != state
-    jne     handle_state_not_running
+      test    state, state        # Cpu_Running(0) != state
+      jne     handle_state_not_running
     .endif
 
     .if STEPLIMIT_CHECK
-    cmp     steps, steplimit    # steps >= steplimit
-    jl      handle_steplimit_reached
+      cmp     steps, steplimit    # steps >= steplimit
+      jl      handle_steplimit_reached
     .endif
 .endm
 
@@ -215,7 +208,6 @@ sz_stack_overflow:
 .endif
 
 .macro VM_PUSH tmpreg args:vararg
-# VM_PUSH_\@:
     .if DBGCNT
     incq    cnt_VM_Push(%rip)
     .endif
@@ -244,7 +236,6 @@ sz_stack_overflow:
 
 
 .macro POP_IMM reg
-# POP_IMM_\@:
     .if DBGCNT
     incq    cnt_LPop(%rip)
     .endif
@@ -549,6 +540,7 @@ sz_divide_zero:
 
 
     RTN Jump
+    # sal     $2, immed32
     movsx   immed32, immed64
     add     immed64, pc
     ADVANCE_PC 2
@@ -557,7 +549,6 @@ sz_divide_zero:
 
 
     RTN Je
-
     .if OPT_CACHED == 2
       movq    top, acc
       movq    subtop, top
@@ -569,6 +560,7 @@ sz_divide_zero:
       FETCH_DECODE
       DISPATCH
 3:
+      movsx   immed32, immed64
       add     immed64, pc
       ADVANCE_PC 2
       FETCH_DECODE
@@ -585,6 +577,7 @@ sz_divide_zero:
       FETCH_DECODE
       DISPATCH
 2:
+      movsx   immed32, immed64
       add     immed64, pc
       ADVANCE_PC 2
       FETCH_DECODE
@@ -600,6 +593,7 @@ sz_divide_zero:
       FETCH_DECODE
       DISPATCH
 1:
+      movsx   immed32, immed64
       add     immed64, pc
       ADVANCE_PC 2
       FETCH_DECODE
@@ -632,7 +626,6 @@ sz_divide_zero:
     lea     sz_fmt_str(%rip), %rdi
     movq    acc, %rsi
     xor     acc, acc
-test:
     call    printf
     pop     %r11
     pop     %r10
@@ -642,11 +635,9 @@ test:
     pop     %rcx
     pop     %rsi
     pop     %rdi
-
     ADVANCE_PC 1
     FETCH_DECODE
     DISPATCH
-
 
     .section .data
 sz_fmt_str:
