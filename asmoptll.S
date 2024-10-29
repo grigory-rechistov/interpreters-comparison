@@ -20,7 +20,7 @@
 .set OPT_ON_SITE, 1 # 3.298s
 
 .set OPT_CACHED, 1  # 11.961s
-.set OPT_CACHED, 2  # 2.847s
+#.set OPT_CACHED, 2  # 2.847s
 
 # Инструкции
 #define Instr_Break   0x0000 /* Abnormal end */
@@ -410,7 +410,10 @@ srv_\name:
       xchg   top, subtop
     .endif
     .if OPT_CACHED == 1
-      xchg   top, (sp)
+      #xchg   top, (sp)
+      pop   opcode_full
+      xchg  opcode_full, top
+      push  opcode_full
     .endif
     .if OPT_CACHED == 0
       .if OPT_ON_SITE == 1
