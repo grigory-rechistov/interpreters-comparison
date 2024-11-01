@@ -1,5 +1,5 @@
 
-.set DBGCNT, 1
+.set DBGCNT, 0
 .set STEPCNT, 0
 .set STEPLIMIT_CHECK, 0
 .set MAX_PROGRAM_SIZE_CHECK, 0
