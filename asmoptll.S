@@ -14,34 +14,6 @@
 .set OPT_CACHED, 1  # 3.004s
 .set OPT_CACHED, 2  # 2.847s
 
-# Инструкции
-#define Instr_Break   0x0000 /* Abnormal end */
-#define Instr_Nop     0x0001
-#define Instr_Halt    0x0002 /* Normal program end */
-#define Instr_Push    0x0003 /* imm */
-#define Instr_Print   0x0004
-#define Instr_JNE     0x0005 /* imm */
-#define Instr_Swap    0x0006
-#define Instr_Dup     0x0007
-#define Instr_JE      0x0008 /* imm */
-#define Instr_Inc     0x0009
-#define Instr_Add     0x000a
-#define Instr_Sub     0x000b
-#define Instr_Mul     0x000c
-#define Instr_Rand    0x000d
-#define Instr_Dec     0x000e
-#define Instr_Drop    0x000f
-#define Instr_Over    0x0010
-#define Instr_Mod     0x0011
-#define Instr_Jump    0x0012 /* imm */
-#define Instr_And     0x0013
-#define Instr_Or      0x0014
-#define Instr_Xor     0x0015
-#define Instr_SHL     0x0016
-#define Instr_SHR     0x0017
-#define Instr_SQRT    0x0018
-#define Instr_Rot     0x0019
-#define Instr_Pick    0x001a
 
 # CPU_T
 #define routines        %rdi
