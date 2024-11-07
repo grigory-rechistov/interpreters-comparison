@@ -133,7 +133,7 @@ static void predecode_program(const Instr_t *prog,
 }
 
 int main(int argc, char **argv) {
-    long long steplimit = parse_args(argc, argv);
+    uint64_t steplimit = parse_args(argc, argv);
     cpu_t cpu = init_cpu();
 
     decode_t decoded_cache[PROGRAM_SIZE];
@@ -305,7 +305,7 @@ int main(int argc, char **argv) {
 
     assert(cpu.state != Cpu_Running || cpu.steps == steplimit);
     /* Print CPU state */
-    printf("CPU executed %lld steps. End state \"%s\".\n",
+    printf("CPU executed %ld steps. End state \"%s\".\n",
             cpu.steps, cpu.state == Cpu_Halted? "Halted":
                        cpu.state == Cpu_Running? "Running": "Break");
     printf("PC = %#x, SP = %d\n", cpu.pc, cpu.sp);

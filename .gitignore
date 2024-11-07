@@ -50,3 +50,6 @@ x64
 # VS files
 .opendb
 .sdf
+.vs
+asmopt
+.vscode

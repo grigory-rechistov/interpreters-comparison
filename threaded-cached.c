@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
         &&sr_SQRT, &&sr_Rot, &&sr_Pick, NULL /* This NULL seems to be essential to keep GCC from over-optimizing? */
     };
 
-    long long steplimit = parse_args(argc, argv);
+    uint64_t steplimit = parse_args(argc, argv);
     cpu_t cpu = init_cpu();
 
     decode_t decoded_cache[PROGRAM_SIZE];
@@ -347,7 +347,7 @@ int main(int argc, char **argv) {
 
     assert(cpu.state != Cpu_Running || cpu.steps == steplimit);
     /* Print CPU state */
-    printf("CPU executed %lld steps. End state \"%s\".\n",
+    printf("CPU executed %ld steps. End state \"%s\".\n",
             cpu.steps, cpu.state == Cpu_Halted? "Halted":
                        cpu.state == Cpu_Running? "Running": "Break");
     printf("PC = %#x, SP = %d\n", cpu.pc, cpu.sp);
