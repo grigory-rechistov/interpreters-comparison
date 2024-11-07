@@ -39,7 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 #include "common.h"
 
 /* TODO:a global - not good. Should be moved into cpu state or somewhere else */
-static long long steplimit = LLONG_MAX;
+static uint64_t steplimit = LLONG_MAX;
 
 static inline Instr_t fetch(const cpu_t *pcpu) {
     assert(pcpu);
@@ -430,7 +430,7 @@ int main(int argc, char **argv) {
 
     assert(cpu.state != Cpu_Running || cpu.steps == steplimit);
     /* Print CPU state */
-    printf("CPU executed %lld steps. End state \"%s\".\n",
+    printf("CPU executed %ld steps. End state \"%s\".\n",
             cpu.steps, cpu.state == Cpu_Halted? "Halted":
                        cpu.state == Cpu_Running? "Running": "Break");
     printf("PC = %#x, SP = %d\n", cpu.pc, cpu.sp);

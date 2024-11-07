@@ -103,13 +103,13 @@ typedef struct {
     uint32_t pc; /* Program Counter */
     int32_t sp; /* Stack Pointer */
     cpu_state_t state;
-    long long steps; /* Statistics - total number of instructions */
+    uint64_t steps; /* Statistics - total number of instructions */
     uint32_t stack[STACK_CAPACITY]; /* Data Stack */
     const Instr_t *pmem; /* Program Memory */
 } cpu_t;
 
 cpu_t init_cpu ();
-long long parse_args(int argc, char** argv);
+uint64_t parse_args(int argc, char** argv);
 void write_program (Instr_t* program, size_t program_size, const char* out_file);
 
 #endif /* COMMON_H_ */

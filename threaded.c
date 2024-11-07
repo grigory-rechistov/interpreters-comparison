@@ -164,13 +164,13 @@ int main(int argc, char **argv) {
         &&sr_Break, &&sr_Nop, &&sr_Halt, &&sr_Push, &&sr_Print,
         &&sr_Jne, &&sr_Swap, &&sr_Dup, &&sr_Je, &&sr_Inc,
         &&sr_Add, &&sr_Sub, &&sr_Mul, &&sr_Rand, &&sr_Dec,
-        &&sr_Drop, &&sr_Over, &&sr_Mod, &&sr_Jump, 
+        &&sr_Drop, &&sr_Over, &&sr_Mod, &&sr_Jump,
         &&sr_And, &&sr_Or, &&sr_Xor,
         &&sr_SHL, &&sr_SHR,
         &&sr_SQRT, &&sr_Rot, &&sr_Pick, NULL /* This NULL seems to be essential to keep GCC from over-optimizing? */
     };
 
-    long long steplimit = parse_args(argc, argv);
+    uint64_t steplimit = parse_args(argc, argv);
     cpu_t cpu = init_cpu();
 
     uint32_t tmp1 = 0, tmp2 = 0, tmp3 = 0;
@@ -380,7 +380,7 @@ int main(int argc, char **argv) {
 
     assert(cpu.state != Cpu_Running || cpu.steps == steplimit);
     /* Print CPU state */
-    printf("CPU executed %lld steps. End state \"%s\".\n",
+    printf("CPU executed %ld steps. End state \"%s\".\n",
             cpu.steps, cpu.state == Cpu_Halted? "Halted":
                        cpu.state == Cpu_Running? "Running": "Break");
     printf("PC = %#x, SP = %d\n", cpu.pc, cpu.sp);
