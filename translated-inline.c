@@ -67,7 +67,7 @@ char gen_code[JIT_CODE_SIZE] __attribute__ ((section (".text#")))
 static uint64_t steplimit = LLONG_MAX;
 
 /* Strings for capsules. It's used for substitution address. Before call
-   printf or puts fuction address have been placed in edi register. */
+   printf or puts function address have been placed in edi register. */
 /* For printf("[%d]\n", tmp1); in sr_Print capsule. */
 const char str_printf[] = "[%d]\n";
 /* For printf("Stack underflow\n"); in pop function. */
@@ -161,7 +161,7 @@ static void inline_translate_program(const Instr_t *prog,
         entrypoints[i] = (void*) cur;
 
         /* Address of function relative of the end of call.
-           Exaple:  addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
+           Example:  addr_exit1 = (intptr_t)&exit_generated_code - (intptr_t)cur - call_template_size
                                 - (intptr_t)call_addr_in_capsule;
            cur - address of start curent binary capsules in translated code.
            call_addr_in_capsule - address of call function in binary capsule. Look in the inline_data.h

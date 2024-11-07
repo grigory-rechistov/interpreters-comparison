@@ -2,7 +2,7 @@
 #define TRANSLATED_INLINE_H_
 
 /* Strings for capsules. It's used for substitution address. Before call
-printf or puts fuction address have been placed in edi register. */
+printf or puts function address have been placed in edi register. */
 extern const char str_printf[]; /* "[%d]\n" */
 extern const char str_pop[];    /* "Stack underflow\n" */
 extern const char str_push[];   /* "Stack overflow\n" */
