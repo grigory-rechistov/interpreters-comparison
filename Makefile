@@ -4,12 +4,14 @@
 #
 
 CFLAGS=-std=c11 -O2 -Wextra -Werror -gdwarf-3
+LDFLAGS = -lm
 
 COMMON_SRC = common.c
 COMMON_OBJ := $(COMMON_SRC:.c=.o)
 COMMON_HEADERS = common.h
 
-ALL = switched threaded predecoded subroutined threaded-cached tailrecursive translated translated-inline native
+ALL = switched threaded predecoded subroutined threaded-cached tailrecursive asmopt translated native # translated-inline
+
 # Must be the first target for the magic below to work
 all: $(ALL)
 
@@ -33,7 +35,7 @@ $(DEPDIR)/%.d: ;
 .PRECIOUS: $(DEPDIR)/%.d
 -include $(patsubst %,$(DEPDIR)/%.d,$(basename $(ALL_SRCS)))
 
-$(ALL): $(COMMON_OBJ) -lm
+$(ALL): $(COMMON_OBJ)
 
 # #######################
 # Individual applications
@@ -41,27 +43,46 @@ $(ALL): $(COMMON_OBJ) -lm
 # Note that some of them use customized CFLAGS
 
 switched: switched.o
+	$(CC) $^ -lm -o $@
 
 threaded: CFLAGS += -fno-gcse -fno-function-cse -fno-thread-jumps -fno-cse-follow-jumps -fno-crossjumping -fno-cse-skip-blocks -fomit-frame-pointer
 threaded: threaded.o
+	$(CC) $^ -lm -o $@
 
 predecoded: predecoded.o
+	$(CC) $^ -lm -o $@
 
 tailrecursive: CFLAGS += -foptimize-sibling-calls
 tailrecursive: tailrecursive.o
+	$(CC) $^ -lm -o $@
+
+asmoptll: asmoptll.o
+	$(CC) -g -pg -c $< -o $@
+
+asmopt: CFLAGS += -foptimize-sibling-calls
+asmopt: asmoptll.o asmopt.o
+	$(CC) -g -pg $^ -lm -o $@
+
+prof:
+	gprof -b asmopt gmon.out
 
 threaded-cached: CFLAGS += -fno-gcse -fno-thread-jumps -fno-cse-follow-jumps -fno-crossjumping -fno-cse-skip-blocks -fomit-frame-pointer
 threaded-cached: threaded-cached.o
+	$(CC) $^ -lm -o $@
 
 subroutined: subroutined.o
+	$(CC) $^ -lm -o $@
 
 translated: CFLAGS += -std=gnu11
 translated: translated.o
+	$(CC) $^ -lm -o $@
 
 translated-inline: CFLAGS += -std=gnu11
 translated-inline: translated-inline.o
+	$(CC) $^ -lm -o $@
 
 native: native.o
+	$(CC) $^ -lm -o $@
 
 ########################
 ### Maintainance targets
